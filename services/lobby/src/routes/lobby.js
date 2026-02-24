@@ -10,13 +10,28 @@ const router = Router();
  *     description: Gestion des Lobby
  */
 
-// crée un lobby avec des paramètres
-router.get('/createLobby', createLobby);
+/**
+ * @swagger
+ * /create:
+ * post:
+ * summary: Crée un nouveau lobby
+ */
+router.post('/create', createLobby);
 
-// donne les infos par défaut d'un lobby
-router.get('/getDefaultLobby', getDefaultLobby);
-
-// rejoins un lobby avec un code
+/**
+ * @swagger
+ * /join:
+ * get:
+ * summary: Vérifie si on peut rejoindre un lobby (HTTP check)
+ */
 router.get('/joinLobby', joinLobby);
+
+/**
+ * @swagger
+ * /default:
+ * get:
+ * summary: Récupère la configuration par défaut
+ */
+router.get('/getDefaultLobby', getDefaultLobby);
 
 export default router;

@@ -33,6 +33,9 @@ services:
       - "8080:80"
     depends_on:
       - frontend
+      - game
+      - lobby
+      - card
     volumes:
       - ./reverse-proxy/logs:/var/log/nginx
 

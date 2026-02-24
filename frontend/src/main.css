@@ -1,17 +1,275 @@
+/* src/main.css */
+
+/* --- Variables pour changer les couleurs facilement --- */
+:root {
+  --bg-color: #020617;       /* Fond très sombre */
+  --glass-bg: rgba(15, 23, 42, 0.7); /* Couleur du verre */
+  --primary: #14b8a6;        /* Teal / Cyan spectre */
+  --primary-glow: rgba(20, 184, 166, 0.4);
+  --text-main: #e2e8f0;      /* Blanc cassé */
+  --text-muted: #94a3b8;     /* Gris */
+  --border-glass: rgba(255, 255, 255, 0.1);
+  --font-serif: 'Georgia', serif; /* Ou ta font importée */
+}
+
+#root{
+  min-width: 100vw;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* --- Ton Body --- */
 body {
   margin: 0;
   padding: 0;
   width: 100%;
   min-height: 100vh;
-  background-image: url(/Home/sky-night.jpg);
+  /* Assure-toi que l'image est bien dans public/Home/ */
+  background-image: url('/Home/sky-night.jpg'); 
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
   display: flex;
   justify-content: center;
   align-items: center;
+  font-family: sans-serif;
+  color: var(--text-main);
+  background-color: var(--bg-color); /* Fallback si l'image charge pas */
 }
 
-.first-container {
-  color: antiquewhite;
+/* --- Composant : Ghost Card (Le cadre en verre) --- */
+.ghost-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px); /* L'effet de flou derrière */
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-glass);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5), 
+              0 0 10px rgba(20, 184, 166, 0.1); /* Lueur subtile */
+  border-radius: 16px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 400px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* --- Titres --- */
+.ghost-title {
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  text-align: center;
+  color: var(--text-main);
+  text-shadow: 0 0 10px var(--primary-glow);
+  margin-bottom: 0.5rem;
+}
+
+.ghost-subtitle {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 2rem;
+}
+
+/* --- Inputs --- */
+.ghost-input {
+  width: -webkit-fill-available;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid #334155;
+  padding: 12px;
+  color: var(--text-main);
+  font-size: 1.1rem;
+  text-align: center;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.ghost-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 10px 20px -10px var(--primary-glow);
+}
+
+/* --- Boutons --- */
+.ghost-button {
+  width: 100%;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-primary {
+  background: rgba(20, 184, 166, 0.2);
+  border: 1px solid rgba(20, 184, 166, 0.5);
+  color: #5eead4;
+}
+
+.btn-primary:hover {
+  background: rgba(20, 184, 166, 0.4);
+  box-shadow: 0 0 15px var(--primary-glow);
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+}
+
+.btn-secondary:hover {
+  color: var(--text-main);
+  border-color: #475569;
+}
+
+/* --- Bouton Flottant (Quitter Lobby) --- */
+.btn-floating {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid var(--border-glass);
+  color: #fca5a5; /* Rouge pâle pour l'action de sortie */
+  padding: 10px 16px;
+  border-radius: 30px;
+  cursor: pointer;
+  backdrop-filter: blur(5px);
+  transition: all 0.3s ease;
+  z-index: 50; /* Pour être sûr qu'il est au dessus */
+}
+
+.btn-floating:hover {
+  background: rgba(127, 29, 29, 0.4);
+  border-color: #fca5a5;
+  box-shadow: 0 0 15px rgba(252, 165, 165, 0.2);
+  transform: translateY(-2px);
+}
+
+/* --- Utilitaires pour CreateGame --- */
+.form-group {
+  
+}
+
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.label {
+  color: #ccfbf1;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 4px;
+}
+
+/* --- Slider Custom --- */
+input[type=range] {
+  width: 100%;
+  height: 6px;
+  background: #334155;
+  border-radius: 5px;
+  appearance: none;
+  outline: none;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  box-shadow: 0 0 10px var(--primary);
+}
+
+/* --- Switch Toggle Custom --- */
+.toggle-switch {
+  position: relative;
+  width: 50px;
+  height: 26px;
+  background-color: #334155;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: 0.3s;
+  border: 1px solid #475569;
+}
+
+.toggle-switch.active {
+  background-color: rgba(20, 184, 166, 0.6);
+  border-color: var(--primary);
+}
+
+.toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background-color: white;
+  border-radius: 50%;
+  transition: 0.3s;
+}
+
+.toggle-switch.active .toggle-knob {
+  transform: translateX(24px);
+  background-color: #ccfbf1;
+  box-shadow: 0 0 8px var(--primary);
+}
+
+/* --- Scrollbar Fantôme (Webkit) --- */
+::-webkit-scrollbar {
+  width: 6px; /* Plus fin */
+  height: 6px;
+}
+
+/* Le fond est totalement transparent (invisible) */
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* La poignée est très discrète par défaut */
+::-webkit-scrollbar-thumb {
+  background: rgba(20, 184, 166, 0.1); /* 10% d'opacité */
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+/* Au survol, elle s'allume comme un néon */
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(20, 184, 166, 0.6);
+  box-shadow: 0 0 10px rgba(20, 184, 166, 0.8); /* Effet Glow */
+  cursor: grab;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(20, 184, 166, 0.1) transparent;
+}
+
+@media (max-width: 615px) {
+  .ghost-card {
+    max-width: 70vw !important;
+    width:auto;
+  }
 }

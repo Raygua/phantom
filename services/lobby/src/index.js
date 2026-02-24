@@ -24,19 +24,20 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 const PORT = 80;
 async function startServer() {
-  const redisClient = await connectRedis();
+  await connectRedis();
 
   const io = new Server(httpServer, {
     cors: { 
       origin: "*",
-      methods: ["GET", "POST"]
+      methods: ["GET", "POST"],
+      credentials: true
     },
-    path: '/socket.io'
+    path: '/socket.io/'
   });
 
-  initLobbySocket(io, redisClient);
+  initLobbySocket(io);
   httpServer.listen(PORT, () => {
-    console.log(`Game service (WebSocket) running on port ${PORT}`);
+    console.log(`Lobby service (WebSocket) running on port ${PORT}`);
   });
 }
 
