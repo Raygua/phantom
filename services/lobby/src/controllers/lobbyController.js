@@ -17,6 +17,9 @@ export const createLobby = async (req, res) => {
       createdAt: Date.now()
     };
 
+    if (settings.maxPlayers < 3)
+      settings.maxPlayers = 3;
+
     await redis.set(`lobby:${lobbyId}:settings`, JSON.stringify(settings), { EX: 86400 });
 
     return res.status(201).json({
@@ -25,36 +28,47 @@ export const createLobby = async (req, res) => {
     });
   } catch (err) {
     console.error('Create Lobby Error:', err);
-    return res.status(500).json({ status: 'error', message: 'Impossible d\'invoquer le lobby.' });
+    return res.status(500).json({ status: 'error', message: 'Unable to create lobby' });
   }
 };
 
 export const joinLobby = async (req, res) => {
   try {
-    const { code, password } = req.query;
+    const { code, password, userId } = req.query;
     const lobbyId = code?.toUpperCase();
 
     const settingsRaw = await redis.get(`lobby:${lobbyId}:settings`);
     if (!settingsRaw) {
-      return res.status(404).json({ status: 'error', message: 'Ce rituel n\'existe pas.' });
+      return res.status(404).json({ status: 'error', message: 'This lobby does not exist' });
     }
 
     const settings = JSON.parse(settingsRaw);
+
+    if (settings.status === 'PLAYING') {
+      if (userId) {
+          const isAlreadyIn = await redis.hExists(`lobby:${lobbyId}:players`, userId);
+          if (isAlreadyIn) {
+              return res.status(200).json({ status: 'success', data: { lobbyId } }); 
+          }
+      }
+      return res.status(403).json({ status: 'error', message: 'This lobby has already started' });
+    }
+
     if (settings.isPrivate && settings.password !== password) {
-      return res.status(403).json({ status: 'error', message: 'Mot de passe incorrect.' });
+      return res.status(403).json({ status: 'error', message: 'Incorrect Password' });
     }
 
     const currentPlayers = await redis.hLen(`lobby:${lobbyId}:players`);
 
     if (currentPlayers >= settings.maxPlayers) {
-      return res.status(409).json({ status: 'error', message: 'Le cercle est complet.' });
+      return res.status(409).json({ status: 'error', message: 'This lobby is full' });
     }
 
     return res.status(200).json({ status: 'success', data: { lobbyId } });
 
   } catch (err) {
     console.error('Join Lobby Error:', err);
-    return res.status(500).json({ status: 'error', message: 'Erreur de connexion.' });
+    return res.status(500).json({ status: 'error', message: 'Connexion error' });
   }
 };
 
@@ -66,32 +80,53 @@ export const getDefaultLobby = async (req, res) => {
 };
 
 export const initLobbySocket = (io) => {
+  const lockLobbyAndStart = async (lobbyKey, lobbyId) => {
+    const settingsRaw = await redis.get(`${lobbyKey}:settings`);
+    if (settingsRaw) {
+      const settings = JSON.parse(settingsRaw);
+      settings.status = 'PLAYING';
+      await redis.set(`${lobbyKey}:settings`, JSON.stringify(settings), { EX: 86400 });
+    }
+    io.to(lobbyId).emit('game_starting', { gameType: 'phantom-ink' });
+  };
+
   io.on('connection', async (socket) => {
     const userId = socket.handshake.auth.userId;
-    const nickname = socket.handshake.auth.nickname || 'Âme errante';
+    const username = socket.handshake.auth.username || 'Player';
 
     socket.data.userId = userId;
-    socket.data.nickname = nickname;
+    socket.data.username = username;
 
-    console.log(`[Lobby] Connexion socket: ${socket.id} | UserID: ${userId}`);
+    console.log(`[Lobby] Login socket: ${socket.id} | UserID: ${userId}`);
 
-    socket.on('join_room', async (lobbyId) => {
-      const roomKey = `lobby:${lobbyId}`;
+    socket.on('join_lobby', async (lobbyId) => {
+      const lobbyKey = `lobby:${lobbyId}`;
 
       if (disconnectTimeouts.has(userId)) {
         clearTimeout(disconnectTimeouts.get(userId));
         disconnectTimeouts.delete(userId);
-        console.log(`[Lobby] Reconnexion de ${userId}. Suppression annulée.`);
+        console.log(`[Lobby] Reconnection ${userId} Deletion canceled`);
       }
 
-      const settingsRaw = await redis.get(`${roomKey}:settings`);
-      if (!settingsRaw) return socket.emit('error_join', 'Lobby introuvable');
+      const settingsRaw = await redis.get(`${lobbyKey}:settings`);
+      if (!settingsRaw) return socket.emit('error_join', 'Lobby not found');
 
       const settings = JSON.parse(settingsRaw);
 
       const globalProfileRaw = await redis.get(`user:${userId}:profile`);
       const globalProfile = globalProfileRaw ? JSON.parse(globalProfileRaw) : null;
-      const existingPlayerRaw = await redis.hGet(`${roomKey}:players`, userId);
+      const existingPlayerRaw = await redis.hGet(`${lobbyKey}:players`, userId);
+
+      if (settings.status === 'PLAYING') {
+         if (existingPlayerRaw) {
+             console.log(`[Lobby] Reconnection ${userId} to the game, automatically redirecting to the game`);
+             return socket.emit('game_starting', { 
+                 gameType: 'phantom-ink', 
+             });
+         } else {
+             return socket.emit('error_join', 'This lobby has already started');
+         }
+      }
 
       let playerObj;
 
@@ -100,33 +135,36 @@ export const initLobbySocket = (io) => {
         playerObj.socketId = socket.id;
 
         if (globalProfile) {
-          playerObj.nickname = globalProfile.nickname;
+          playerObj.username = globalProfile.username;
           playerObj.color = globalProfile.color;
         }
       } else {
-        const currentPlayers = await redis.hLen(`${roomKey}:players`);
+        const currentPlayers = await redis.hLen(`${lobbyKey}:players`);
         if (currentPlayers >= settings.maxPlayers) {
-          return socket.emit('error_join', 'Le rituel est complet (Complet).');
+          return socket.emit('error_join', 'The lobby is already full');
         }
+
+        const isHost = currentPlayers === 0;
 
         playerObj = {
           id: userId,
-          nickname: globalProfile?.nickname || nickname,
+          username: globalProfile?.username || username,
           color: globalProfile?.color || '#e2e8f0',
           socketId: socket.id,
-          isReady: false
+          isReady: false,
+          isHost: isHost
         };
       }
 
-      socket.data.nickname = playerObj.nickname;
+      socket.data.username = playerObj.username;
 
-      await redis.hSet(`${roomKey}:players`, userId, JSON.stringify(playerObj));
-      await redis.expire(`${roomKey}:players`, 86400);
+      await redis.hSet(`${lobbyKey}:players`, userId, JSON.stringify(playerObj));
+      await redis.expire(`${lobbyKey}:players`, 86400);
 
       socket.join(lobbyId);
       socket.data.lobbyId = lobbyId;
 
-      const playersMap = await redis.hGetAll(`${roomKey}:players`);
+      const playersMap = await redis.hGetAll(`${lobbyKey}:players`);
       const playersList = Object.values(playersMap).map(p => JSON.parse(p));
       io.to(lobbyId).emit('player_list_update', playersList);
     });
@@ -135,7 +173,19 @@ export const initLobbySocket = (io) => {
       const { lobbyId, userId } = socket.data;
       if (lobbyId && userId) {
         const timeout = setTimeout(async () => {
-          console.log(`[Lobby] Suppression définitive de ${userId}`);
+
+          const settingsRaw = await redis.get(`lobby:${lobbyId}:settings`);
+          if (settingsRaw) {
+              const settings = JSON.parse(settingsRaw);
+              // Si la partie a commencé, on annule la suppression !
+              if (settings.status === 'PLAYING') {
+                  console.log(`[Lobby] Le joueur ${userId} est dans le jeu, on le garde en mémoire.`);
+                  disconnectTimeouts.delete(userId);
+                  return;
+              }
+          }
+
+          console.log(`[Lobby] Permanent deletion of ${userId}`);
           await redis.hDel(`lobby:${lobbyId}:players`, userId);
 
           const playersMap = await redis.hGetAll(`lobby:${lobbyId}:players`);
@@ -143,15 +193,15 @@ export const initLobbySocket = (io) => {
           io.to(lobbyId).emit('player_list_update', playersList);
 
           disconnectTimeouts.delete(userId);
-        }, 60 * 1000);
+        }, 5 * 1000);
 
         disconnectTimeouts.set(userId, timeout);
       }
     });
 
-    socket.on('send_message', ({ room, text }) => {
-      io.to(room).emit('receive_message', {
-        sender: socket.data.nickname,
+    socket.on('send_message', ({ lobby, text }) => {
+      io.to(lobby).emit('receive_message', {
+        sender: socket.data.username,
         text: text,
         isMe: false
       });
@@ -162,31 +212,70 @@ export const initLobbySocket = (io) => {
       if (!lobbyId || !userId) return;
 
       const newProfile = {
-        nickname: data.nickname,
+        username: data.username,
         color: data.color
       };
 
       await redis.set(`user:${userId}:profile`, JSON.stringify(newProfile), { EX: 2592000 });
 
       if (lobbyId) {
-        const roomKey = `lobby:${lobbyId}`;
-        const playerRaw = await redis.hGet(`${roomKey}:players`, userId);
+        const lobbyKey = `lobby:${lobbyId}`;
+        const playerRaw = await redis.hGet(`${lobbyKey}:players`, userId);
 
         if (playerRaw) {
           const player = JSON.parse(playerRaw);
 
-          player.nickname = newProfile.nickname || player.nickname;
+          player.username = newProfile.username || player.username;
           player.color = newProfile.color || player.color;
 
-          await redis.hSet(`${roomKey}:players`, userId, JSON.stringify(player));
-          socket.data.nickname = player.nickname;
+          await redis.hSet(`${lobbyKey}:players`, userId, JSON.stringify(player));
+          socket.data.username = player.username;
 
-          const playersMap = await redis.hGetAll(`${roomKey}:players`);
+          const playersMap = await redis.hGetAll(`${lobbyKey}:players`);
           const playersList = Object.values(playersMap).map(p => JSON.parse(p));
           io.to(lobbyId).emit('player_list_update', playersList);
         }
       }
-      
+
+    });
+
+    socket.on('toggle_ready', async () => {
+      const { lobbyId, userId } = socket.data;
+      if (!lobbyId || !userId) return;
+
+      const lobbyKey = `lobby:${lobbyId}`;
+      const playerRaw = await redis.hGet(`${lobbyKey}:players`, userId);
+
+      if (playerRaw) {
+        const player = JSON.parse(playerRaw);
+        player.isReady = !player.isReady;
+        await redis.hSet(`${lobbyKey}:players`, userId, JSON.stringify(player));
+
+        const playersMap = await redis.hGetAll(`${lobbyKey}:players`);
+        const playersList = Object.values(playersMap).map(p => JSON.parse(p));
+
+        io.to(lobbyId).emit('player_list_update', playersList);
+
+        const allReady = playersList.length > 2 && playersList.every(p => p.isReady);
+        if (allReady) {
+          await lockLobbyAndStart(lobbyKey, lobbyId);
+        }
+      }
+    });
+
+    socket.on('force_start', async () => {
+      const { lobbyId, userId } = socket.data;
+      if (!lobbyId || !userId) return;
+
+      const lobbyKey = `lobby:${lobbyId}`;
+      const playerRaw = await redis.hGet(`${lobbyKey}:players`, userId);
+
+      if (playerRaw) {
+        const player = JSON.parse(playerRaw);
+        if (player.isHost) {
+          await lockLobbyAndStart(lobbyKey, lobbyId);
+        }
+      }
     });
   });
 };

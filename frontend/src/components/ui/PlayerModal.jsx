@@ -13,12 +13,12 @@ const GHOST_COLORS = [
 ];
 
 export const PlayerModal = ({ isOpen, onClose, defaultName, defaultColor, onSave }) => {
-    const [nickname, setNickname] = useState('');
+    const [username, setUsername] = useState('');
     const [color, setColor] = useState('');
 
     useEffect(() => {
         if (isOpen) {
-            setNickname(defaultName || '');
+            setUsername(defaultName || '');
             setColor(defaultColor || GHOST_COLORS[0]);
         }
     }, [isOpen, defaultName, defaultColor]);
@@ -26,8 +26,8 @@ export const PlayerModal = ({ isOpen, onClose, defaultName, defaultColor, onSave
     if (!isOpen) return null;
 
     const handleSave = () => {
-        if (!nickname.trim()) return;
-        onSave({ nickname: nickname.trim(), color });
+        if (!username.trim()) return;
+        onSave({ username: username.trim(), color });
         onClose();
     };
 
@@ -46,8 +46,8 @@ export const PlayerModal = ({ isOpen, onClose, defaultName, defaultColor, onSave
                 <div className="form-group">
                     <label className="label" style={{ marginBottom: '8px' }}>Nouveau Pseudo</label>
                     <GhostInput 
-                        value={nickname}
-                        onChange={(e) => setNickname(e.target.value)}
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
                         placeholder="Ex: Fantôme Sombre"
                         maxLength={20}
                         autoFocus

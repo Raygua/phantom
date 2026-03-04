@@ -6,10 +6,10 @@ export const useUser = () => {
     const [userId, setUserId] = useState(null);
 
     useEffect(() => {
-        let id = Cookies.get('spirit_user_id');
+        let id = Cookies.get('player_user_id');
         if (!id) {
             id = uuidv4();
-            Cookies.set('spirit_user_id', id, { expires: 7 }); 
+            Cookies.set('player_user_id', id, { expires: 7 }); 
         }
         setUserId(id);
     }, []);

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { User, Sparkles, Lock, ArrowRight } from 'lucide-react';
+import { User, Sparkles, Lock } from 'lucide-react';
+import { useUser } from '../hooks/useUser';
 
 function Home() {
     const navigate = useNavigate();
@@ -10,6 +11,7 @@ function Home() {
     const [showPasswordInput, setShowPasswordInput] = useState(false);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const userId = useUser();
 
     const handleJoin = async () => {
         if (!code) return;
@@ -17,7 +19,7 @@ function Home() {
         setIsLoading(true);
 
         try {
-            let url = `/api/lobby/joinLobby?code=${code}`;
+            let url = `/api/lobby/joinLobby?code=${code}&userId=${userId}`;
             if (password) url += `&password=${password}`;
 
             const response = await fetch(url, {
@@ -40,7 +42,7 @@ function Home() {
             }
         } catch (err) {
             console.error(err);
-            setError("Les esprits ne répondent pas.");
+            setError("Erreur de connexion aux serveurs");
         } finally {
             setIsLoading(false);
         }

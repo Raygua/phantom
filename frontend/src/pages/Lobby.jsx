@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { useUser } from '../hooks/useUser';
-import { Ghost, Send, Copy, Play, LogOut, Settings } from 'lucide-react'; // Ajout de LogOut
+import { Ghost, Send, Copy, Play, LogOut, Settings, CheckCircle, Crown } from 'lucide-react';
 import { PlayerModal } from '../components/ui/PlayerModal';
 
 function Lobby() {
@@ -25,7 +25,7 @@ function Lobby() {
     const myProfile = players.find(p => p.id === userId) || {};
 
     const handleJoin = async () => {
-        let url = `/api/lobby/joinLobby?code=${gameId}`;
+        let url = `/api/lobby/joinLobby?code=${gameId}&userId=${userId}`;
         if (effectivePassword) url += `&password=${effectivePassword}`;
 
         try {
@@ -59,7 +59,7 @@ function Lobby() {
                 transports: ['websocket'],
                 auth: {
                     userId: userId,
-                    nickname: "Spectre " + userId.slice(0, 4),
+                    username: "Spectre " + userId.slice(0, 4),
                     password: effectivePassword
                 }
             });
@@ -73,7 +73,7 @@ function Lobby() {
                 navigate('/');
             });
 
-            socketRef.current.emit('join_room', gameId);
+            socketRef.current.emit('join_lobby', gameId);
 
             socketRef.current.on('player_list_update', (list) => {
                 setPlayers(list);
@@ -81,6 +81,12 @@ function Lobby() {
 
             socketRef.current.on('receive_message', (msg) => {
                 setMessages((prev) => [...prev, msg]);
+            });
+
+            socketRef.current.on('game_starting', ({ gameType }) => {
+                console.log(`LE JEU COMMENCE ! Redirection vers le jeu : ${gameType}...`);
+                socketRef.current.disconnect();
+                navigate(`/${gameType}/${gameId}`);
             });
         }
 
@@ -96,7 +102,7 @@ function Lobby() {
         if (!inputText.trim()) return;
 
         socketRef.current.emit('send_message', {
-            room: gameId,
+            lobby: gameId,
             text: inputText
         });
         setInputText("");
@@ -118,6 +124,14 @@ function Lobby() {
 
     const handleSaveProfile = (newProfile) => {
         socketRef.current.emit('update_player_profile', newProfile);
+    };
+
+    const toggleReady = () => {
+        socketRef.current.emit('toggle_ready');
+    };
+
+    const forceStart = () => {
+        socketRef.current.emit('force_start');
     };
 
     // --- Styles Inline ---
@@ -158,9 +172,12 @@ function Lobby() {
                             <Copy size={16} style={{ cursor: 'pointer', opacity: 0.8 }} onClick={copyInviteLink} />
                         </div>
                     </div>
-                    <button className="ghost-button btn-primary" style={{ width: 'auto' }} onClick={() => console.log("Start")}>
-                        <Play size={16} /> LANCER LA PARTIE
-                    </button>
+
+                    {myProfile.isHost && (
+                        <button className="ghost-button btn-primary" style={{ width: 'auto' }} onClick={forceStart}>
+                            <Play size={16} /> FORCER LE LANCEMENT
+                        </button>
+                    )}
                 </div>
 
                 {/* --- Main Content Grid --- */}
@@ -171,6 +188,21 @@ function Lobby() {
                         <h3 className="label" style={{ marginBottom: '15px' }}>
                             <Ghost size={16} /> Nombre de joueurs ({players.length})
                         </h3>
+                        <button
+                            onClick={toggleReady}
+                            style={{
+                                width: '100%', padding: '12px', marginBottom: '20px', borderRadius: '8px',
+                                background: myProfile.isReady ? 'rgba(20, 184, 166, 0.4)' : 'rgba(255, 255, 255, 0.05)',
+                                border: `1px solid ${myProfile.isReady ? 'var(--primary)' : 'var(--border-glass)'}`,
+                                color: myProfile.isReady ? '#fff' : 'var(--text-muted)',
+                                cursor: 'pointer', transition: 'all 0.3s ease',
+                                display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px',
+                                fontWeight: 'bold', letterSpacing: '1px'
+                            }}
+                        >
+                            <CheckCircle size={18} />
+                            {myProfile.isReady ? "JE SUIS PRÊT" : "SE PRÉPARER"}
+                        </button>
                         <button
                             onClick={() => setIsModalOpen(true)}
                             className="label"
@@ -187,15 +219,17 @@ function Lobby() {
                                     padding: '10px', marginBottom: '8px',
                                     background: 'rgba(255,255,255,0.05)', borderRadius: '8px', border: '1px solid var(--border-glass)'
                                 }}>
-                                    <div style={{
-                                        width: '8px', height: '8px', borderRadius: '50%',
-                                        background: p.color || 'var(--primary)',
-                                        boxShadow: `0 0 8px ${p.color || 'var(--primary)'}`
-                                    }}></div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: p.color || 'var(--primary)', boxShadow: `0 0 8px ${p.color || 'var(--primary)'}` }}></div>
+                                        <span style={{ color: p.color || 'var(--text-main)', fontWeight: p.id === userId ? 'bold' : 'normal' }}>
+                                            {p.username || `Spectre #${i + 1}`}
+                                        </span>
+                                    </div>
 
-                                    <span style={{ color: p.color || 'var(--text-main)', fontWeight: p.id === userId ? 'bold' : 'normal' }}>
-                                        {p.nickname || `Spectre #${i + 1}`}
-                                    </span>
+                                    <div style={{ display: 'flex', gap: '8px', color: 'var(--text-muted)' }}>
+                                        {p.isHost && <Crown size={16} style={{ color: '#f59e0b' }} title="Maître du rituel" />}
+                                        {p.isReady && <CheckCircle size={16} style={{ color: 'var(--primary)' }} />}
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -205,7 +239,7 @@ function Lobby() {
                     <div className="ghost-card" style={{ display: 'flex', flexDirection: 'column', padding: '20px', width: "auto" }}>
                         <div style={{ flex: 1, overflowY: 'auto', marginBottom: '15px', paddingRight: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {messages.map((msg, i) => {
-                                const isMe = msg.sender === (socketRef.current?.auth?.nickname || 'Moi') || msg.isMe;
+                                const isMe = msg.sender === (socketRef.current?.auth?.username || 'Moi') || msg.isMe;
                                 return (
                                     <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
                                         <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '2px' }}>{msg.sender}</span>
@@ -216,8 +250,8 @@ function Lobby() {
                                             color: isMe ? '#ccfbf1' : 'var(--text-main)',
                                             borderTopRightRadius: isMe ? '0' : '12px',
                                             borderTopLeftRadius: isMe ? '12px' : '0',
-                                            wordBreak: 'break-word',    // Coupe les mots trop longs
-                                            overflowWrap: 'break-word', // Standard moderne
+                                            wordBreak: 'break-word',
+                                            overflowWrap: 'break-word',
                                             whiteSpace: 'pre-wrap'
                                         }}>
                                             {msg.text}
@@ -250,10 +284,10 @@ function Lobby() {
                 </div>
             </div>
 
-            <PlayerModal 
+            <PlayerModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                defaultName={myProfile.nickname}
+                defaultName={myProfile.username}
                 defaultColor={myProfile.color}
                 onSave={handleSaveProfile}
             />
