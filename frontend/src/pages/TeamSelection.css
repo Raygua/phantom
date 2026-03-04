@@ -1,0 +1,133 @@
+/* src/pages/TeamSelection.css */
+
+.team-selection-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.teams-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+@media (max-width: 768px) {
+  .teams-grid {
+    grid-template-columns: 1fr; /* S'empile sur mobile */
+  }
+}
+
+/* --- Colonnes des Équipes --- */
+.team-col {
+  background: rgba(15, 23, 42, 1);
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  backdrop-filter: blur(10px);
+}
+
+.team-sun {
+  border: 2px solid rgba(252, 211, 77, 1); /* Jaune/Doré */
+  box-shadow: 0 0 20px rgba(252, 211, 77, 0.05);
+}
+
+.team-moon {
+  border: 2px solid rgba(167, 139, 250, 1); /* Violet/Bleu */
+  box-shadow: 0 0 20px rgba(167, 139, 250, 0.05);
+}
+
+.team-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 1.5rem;
+  font-weight: bold;
+  font-family: var(--font-serif);
+}
+
+.team-sun .team-header { color: #fcd34d; text-shadow: 0 0 10px rgba(252, 211, 77, 1); }
+.team-moon .team-header { color: #a78bfa; text-shadow: 0 0 10px rgba(167, 139, 250, 1); }
+
+/* --- Boîtes des Rôles (Esprit / Médium) --- */
+.role-box {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 1rem;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+}
+
+.role-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Bouton pour rejoindre un rôle */
+.btn-join {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-main);
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-join:hover {
+  background: rgba(20, 184, 166, 0.3);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+/* --- Étiquettes des Joueurs --- */
+.player-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin: 4px;
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.player-color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* Zone spéciale 3 joueurs (Esprit Partagé) */
+.shared-spirit-zone {
+  grid-column: 1 / -1; /* Prend toute la largeur */
+  background: rgb(15, 42, 42);
+  border: 2px solid var(--primary);
+  border-radius: 16px;
+  padding: 1.5rem;
+  text-align: center;
+  box-shadow: 0 0 20px rgba(20, 184, 166, 0.1);
+}
+
+.game-info {
+  background-color: rgba(15, 23, 42, 1);
+  border: 2px solid #fa8b8b;
+  border-radius: 16px;
+}

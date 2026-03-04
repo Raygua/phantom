@@ -44,10 +44,10 @@ function CreateGame() {
             if (response.ok && data.status === 'success') {
                 navigate(`/lobby/${data.data.lobbyId}`);
             } else {
-                setError(data.message || "Le rituel a échoué.");
+                setError(data.message || "La création de la partie à échoué");
             }
         } catch (err) {
-            setError("Erreur de connexion aux esprits.");
+            setError("Erreur de connexion aux serveurs");
         } finally {
             setIsLoading(false);
         }
@@ -68,7 +68,6 @@ function CreateGame() {
             </button>
             <div className="ghost-card" style={{ minHeight: "450px" }}>
 
-                {/* Titre (Le bouton Retour a été supprimé ici) */}
                 <div className="text-center" style={{ marginTop: '10px' }}>
                     <h1 className="ghost-title">Paramètres</h1>
                     <p className="ghost-subtitle">Configurez les paramètres de la partie</p>
@@ -82,8 +81,8 @@ function CreateGame() {
                     </div>
                     <input
                         type="range"
-                        min="2"
-                        max="10"
+                        min="3"
+                        max="12"
                         value={settings.maxPlayers}
                         onChange={(e) => setSettings({ ...settings, maxPlayers: parseInt(e.target.value) })}
                     />

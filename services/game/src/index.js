@@ -3,7 +3,7 @@ import morgan from 'morgan';
 import routes from './routes/game.js';
 import { connectRedis } from "./config/redisClient.js";
 import { createServer } from 'http';
-import { initGameSocket } from './controllers/gameController.js';
+import { initPhantomSocket as initGameSocket } from './controllers/gameController.js';
 import { Server } from 'socket.io';
 import swaggerUi from 'swagger-ui-express';
 import { specs } from './config/swagger.js';

@@ -1,0 +1,115 @@
+/* src/components/Card.css */
+
+.phantom-card-container {
+    width: 140px;
+    height: 200px;
+    perspective: 1000px; /* Pour l'effet 3D */
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    user-select: none;
+}
+
+/* Effet quand la carte est sélectionnée par le Médium dans sa main */
+.phantom-card-container.selected {
+    transform: translateY(-20px);
+    box-shadow: 0 15px 25px rgba(252, 211, 77, 0.3); /* Lueur dorée */
+}
+
+.phantom-card-inner {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+    transform-style: preserve-3d;
+}
+
+/* Si la carte est face cachée (verso) */
+.phantom-card-container.face-down .phantom-card-inner {
+    transform: rotateY(180deg);
+}
+
+/* Style commun aux deux faces */
+.phantom-card-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 10px;
+    background: #0f1115; /* Fond très sombre, presque noir */
+    border: 2px solid #ceb070; /* Bordure dorée pâle */
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.8), 0 5px 10px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    overflow: hidden;
+}
+
+/* Le design du Recto (La question) */
+.phantom-card-front {
+    justify-content: space-between;
+}
+
+/* Les petits décors dorés en haut et en bas */
+.card-decoration {
+    color: #ceb070;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-align: center;
+    width: 100%;
+    padding-bottom: 5px;
+    border-bottom: 1px solid rgba(206, 176, 112, 0.3);
+}
+
+.card-decoration-bottom {
+    border-bottom: none;
+    border-top: 1px solid rgba(206, 176, 112, 0.3);
+    padding-bottom: 0;
+    padding-top: 5px;
+    transform: rotate(180deg); /* Le texte à l'envers en bas comme sur ta photo ! */
+}
+
+.card-text {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    text-align: center;
+    font-family: var(--font-serif), serif; /* Assure-toi d'avoir une police élégante */
+    font-size: 0.95rem;
+    color: #e2e8f0;
+    line-height: 1.4;
+    padding: 0 5px;
+}
+
+/* Le design du Verso (Dos de la carte) */
+.phantom-card-back {
+    transform: rotateY(180deg);
+    justify-content: center;
+    background: repeating-linear-gradient(
+        45deg,
+        #111,
+        #111 10px,
+        #1a1a1a 10px,
+        #1a1a1a 20px
+    );
+    border: 2px solid #555;
+}
+
+.card-logo {
+    color: var(--text-muted);
+    font-family: var(--font-serif), serif;
+    font-size: 1.2rem;
+    text-align: center;
+    opacity: 0.5;
+}
+
+.phantom-card-container:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.6);
+}
+
+/* On s'assure que la carte sélectionnée garde son état plus haut */
+.phantom-card-container.selected:hover {
+    transform: translateY(-20px); 
+}
