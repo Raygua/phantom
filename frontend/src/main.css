@@ -12,12 +12,17 @@
   --font-serif: 'Georgia', serif; /* Ou ta font importée */
 }
 
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 #root{
-  min-width: 100vw;
+  width: 100%;
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
+  overflow-x: hidden;
 }
 
 /* --- Ton Body --- */
@@ -88,7 +93,6 @@ body {
 
 .ghost-input:focus {
   border-color: var(--primary);
-  box-shadow: 0 10px 20px -10px var(--primary-glow);
 }
 
 /* --- Boutons --- */
@@ -107,14 +111,13 @@ body {
 }
 
 .btn-primary {
-  background: rgba(20, 184, 166, 0.2);
-  border: 1px solid rgba(20, 184, 166, 0.5);
+  background: rgb(8, 77, 69);
+  border: 1px solid rgba(20, 184, 166);
   color: #5eead4;
 }
 
 .btn-primary:hover {
-  background: rgba(20, 184, 166, 0.4);
-  box-shadow: 0 0 15px var(--primary-glow);
+  box-shadow: 0 0 18px var(--primary-glow);
   transform: translateY(-2px);
 }
 

@@ -3,16 +3,66 @@
 .phantom-card-container {
     width: 140px;
     height: 200px;
-    perspective: 1000px; /* Pour l'effet 3D */
+    perspective: 1000px;
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
     user-select: none;
+    position: relative;
+    z-index: 1;
+    
+    margin-left: -50px; 
+    
+    /* 🌟 VARIABLES MATHÉMATIQUES MAGIQUES */
+    --hover-shift-x: 0px;  /* Décalage dû au survol */
+    --sel-shift-1: 0px;    /* Décalage dû à 1 sélection */
+    --sel-shift-2: 0px;    /* Décalage dû à 2 sélections */
+    --hover-shift-y: 0px;
+    
+    /* On additionne dynamiquement tous les décalages possibles ! */
+    transform: translate(calc(var(--hover-shift-x) + var(--sel-shift-1) + var(--sel-shift-2)), var(--hover-shift-y));
+    
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), margin 0.3s ease;
 }
 
-/* Effet quand la carte est sélectionnée par le Médium dans sa main */
+.phantom-card-container:first-child {
+    margin-left: 0;
+}
+
+/* --- 1. SURVOL CLASSIQUE --- */
+.phantom-card-container:hover {
+    --hover-shift-y: -25px;
+    z-index: 10;
+}
+.phantom-card-container:hover ~ .phantom-card-container {
+    --hover-shift-x: 50px;
+}
+
+/* --- 2. SÉLECTION --- */
 .phantom-card-container.selected {
-    transform: translateY(-20px);
-    box-shadow: 0 15px 25px rgba(252, 211, 77, 0.3); /* Lueur dorée */
+    --hover-shift-y: -30px;
+    z-index: 100;
+}
+.phantom-card-container.selected .phantom-card-face {
+    box-shadow: 0 15px 25px rgba(252, 211, 77, 0.7);
+    border-color: #fcd34d;
+}
+
+/* 🌟 L'ASTUCE : 1 carte sélectionnée repousse ses voisines de 50px */
+.phantom-card-container.selected ~ .phantom-card-container {
+    --sel-shift-1: 50px;
+}
+
+/* 🌟 L'ASTUCE X2 : Si 2 cartes sont sélectionnées, on ajoute ENCORE 50px ! */
+.phantom-card-container.selected ~ .phantom-card-container.selected ~ .phantom-card-container {
+    --sel-shift-2: 50px;
+}
+
+/* --- 3. SÉCURITÉ : SURVOL D'UNE CARTE SÉLECTIONNÉE --- */
+.phantom-card-container.selected:hover {
+    --hover-shift-y: -30px; 
+    z-index: 100; 
+}
+.phantom-card-container.selected:hover ~ .phantom-card-container {
+    --hover-shift-x: 0px; /* On n'écarte pas au survol car la carte est DÉJÀ écartée par sa sélection */
 }
 
 .phantom-card-inner {
@@ -43,6 +93,11 @@
     align-items: center;
     padding: 10px;
     overflow: hidden;
+    box-sizing: border-box;
+}
+
+.phantom-card-face.isSpirit {
+    border: 2px solid #ffffff;
 }
 
 /* Le design du Recto (La question) */
@@ -59,15 +114,22 @@
     text-align: center;
     width: 100%;
     padding-bottom: 5px;
-    border-bottom: 1px solid rgba(206, 176, 112, 0.3);
+    border-bottom: 1px solid rgba(206, 176, 112, 0.4);
 }
 
 .card-decoration-bottom {
-    border-bottom: none;
-    border-top: 1px solid rgba(206, 176, 112, 0.3);
-    padding-bottom: 0;
+    border-top: none;
+    border-bottom: 1px solid rgba(206, 176, 112, 0.4);
     padding-top: 5px;
     transform: rotate(180deg); /* Le texte à l'envers en bas comme sur ta photo ! */
+}
+
+.card-decoration.isSpirit {
+    color: #ffffff;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+}
+.card-decoration-bottom.isSpirit {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 .card-text {
@@ -104,12 +166,21 @@
     opacity: 0.5;
 }
 
-.phantom-card-container:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.6);
-}
-
-/* On s'assure que la carte sélectionnée garde son état plus haut */
-.phantom-card-container.selected:hover {
-    transform: translateY(-20px); 
+@media (max-width: 1200px) {
+    .phantom-card-container {
+        margin-left: 0 !important; /* On annule le chevauchement PC */
+        flex-shrink: 0; /* 🌟 CRUCIAL : Interdit à la carte de s'écraser */
+        scroll-snap-align: center; /* Aimante la carte au centre lors du swipe */
+    }
+    
+    /* On désactive les décalages dynamiques du PC */
+    .phantom-card-container:hover ~ .phantom-card-container {
+        --hover-shift-x: 0px; 
+    }
+    .phantom-card-container.selected ~ .phantom-card-container {
+        --sel-shift-1: 0px;
+    }
+    .phantom-card-container.selected ~ .phantom-card-container.selected ~ .phantom-card-container {
+        --sel-shift-2: 0px;
+    }
 }

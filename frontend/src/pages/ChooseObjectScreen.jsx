@@ -36,7 +36,13 @@ const ChooseObjectScreen = ({ game, socket, myProfile }) => {
                             style={{ textAlign: 'center', fontSize: '1.5rem', textTransform: 'uppercase' }}
                             placeholder="OBJET SECRET..."
                             value={secretWord}
-                            onChange={(e) => setSecretWord(e.target.value)}
+                            onChange={(e) => {
+                                const sanitizedWord = e.target.value
+                                    .replace(/[^a-zA-Z _]/g, '') // On autorise les lettres et les espaces
+                                    .toUpperCase()
+                                    .replace(/ /g, '_');         // On remplace direct l'espace par _
+                                setSecretWord(sanitizedWord);
+                            }}
                             disabled={isSubmitting}
                             autoFocus
                         />
