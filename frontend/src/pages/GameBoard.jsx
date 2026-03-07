@@ -1,10 +1,23 @@
 import { useUser } from '../hooks/useUser';
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ChooseObjectScreen from './ChooseObjectScreen';
 import PlayingBoard from './PlayingBoard';
+import GameOverScreen from './GameOverScreen';
 import './GameBoard.css';
 
 function GameBoard({ game, socket }) {
     const userId = useUser();
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const handleRedirect = () => {
+            navigate(`/lobby/${game.gameId}`); 
+        };
+
+        socket.on('redirect_to_lobby', handleRedirect);
+        return () => socket.off('redirect_to_lobby', handleRedirect);
+    }, [socket, navigate, game.gameId]);
 
     const myProfile = Object.values(game.players).find(p => p.id === userId);
 
@@ -19,13 +32,7 @@ function GameBoard({ game, socket }) {
     }
 
     if (game.status === 'FINISHED') {
-        return (
-            <div className="ghost-card text-center">
-                <h1 className="ghost-title">LE RITUEL EST TERMINÉ</h1>
-                <h2>Victoire : Équipe {game.winner}</h2>
-                <p>Le mot secret était : {game.secretObject}</p>
-            </div>
-        );
+        return <GameOverScreen game={game} socket={socket} myProfile={myProfile} />;
     }
 
     return null;

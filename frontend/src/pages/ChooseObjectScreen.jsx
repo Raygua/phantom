@@ -1,15 +1,61 @@
-import React, { useState } from 'react';
+// src/pages/ChooseObjectScreen.jsx
+import React, { useState, useRef, useEffect } from 'react';
 import { Ghost, Check } from 'lucide-react';
 
 const ChooseObjectScreen = ({ game, socket, myProfile }) => {
     const [secretWord, setSecretWord] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-
     const isSpirit = myProfile.role === 'SPIRIT';
 
+    const editableRef = useRef(null);
+
+    useEffect(() => {
+        if (!isSpirit) return;
+
+        const handleSecretUpdate = ({ word }) => {
+            setSecretWord(word);
+
+            if (editableRef.current && editableRef.current.innerText !== word) {
+                editableRef.current.innerText = word;
+                
+                if (document.activeElement === editableRef.current) {
+                    const range = document.createRange();
+                    const sel = window.getSelection();
+                    range.selectNodeContents(editableRef.current);
+                    range.collapse(false);
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                }
+            }
+        };
+
+        socket.on('secret_object_typing', handleSecretUpdate);
+        return () => socket.off('secret_object_typing', handleSecretUpdate);
+    }, [socket, isSpirit]);
+
+    const handleInput = (e) => {
+        // On récupère le texte brut
+        const rawText = e.target.innerText;
+        
+        // On nettoie
+        const sanitizedWord = rawText
+            .replace(/[^a-zA-Z _]/g, '')
+            .toUpperCase()
+            .replace(/ /g, '_');
+        
+        // On met à jour l'état local
+        setSecretWord(sanitizedWord);
+
+        // On émet vers le serveur
+        socket.emit('typing_secret_object', { 
+            gameId: game.gameId, 
+            word: sanitizedWord 
+        });
+    };
+
     const handleSubmit = (e) => {
-        e.preventDefault();
-        if (!secretWord.trim()) return;
+        if (e) e.preventDefault();
+        if (!secretWord.trim() || isSubmitting) return;
         
         setIsSubmitting(true);
         socket.emit('set_secret_object', { 
@@ -20,40 +66,36 @@ const ChooseObjectScreen = ({ game, socket, myProfile }) => {
 
     return (
         <div className="ghost-card choose-object-wrapper">
-            <Ghost size={64} color="var(--primary)" style={{ opacity: 0.5 }} />
+            <Ghost size={64} color="var(--primary)" style={{ opacity: 0.5, marginBottom: '20px' }} />
             
             {isSpirit ? (
                 <>
                     <h2 className="ghost-title">Le Secret des Esprits</h2>
-                    <p className="ghost-subtitle">
-                        Mettez-vous d'accord (à l'oral ou via un chat tiers) et définissez l'Objet Secret que les Médiums devront deviner.
-                    </p>
+                    <p className="ghost-subtitle">Définissez l'objet que les Médiums devront deviner.</p>
                     
-                    <form onSubmit={handleSubmit} className="secret-input-container">
-                        <input
-                            type="text"
-                            className="ghost-input"
-                            style={{ textAlign: 'center', fontSize: '1.5rem', textTransform: 'uppercase' }}
-                            placeholder="OBJET SECRET..."
-                            value={secretWord}
-                            onChange={(e) => {
-                                const sanitizedWord = e.target.value
-                                    .replace(/[^a-zA-Z _]/g, '') // On autorise les lettres et les espaces
-                                    .toUpperCase()
-                                    .replace(/ /g, '_');         // On remplace direct l'espace par _
-                                setSecretWord(sanitizedWord);
-                            }}
-                            disabled={isSubmitting}
-                            autoFocus
-                        />
+                    <div className="secret-input-wrapper">
+                        <div
+                            ref={editableRef}
+                            contentEditable={!isSubmitting}
+                            // 🌟 CORRECTION 2 : Empêche React de râler
+                            suppressContentEditableWarning={true} 
+                            onInput={handleInput}
+                            onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
+                            className="ghost-input-editable"
+                            data-placeholder="OBJET SECRET..."
+                        >
+                            {/* On laisse vide au rendu initial, ou on gère via innerText dans un useEffect de montage */}
+                        </div>
+
                         <button 
-                            type="submit" 
+                            onClick={handleSubmit}
                             className="ghost-button btn-primary"
                             disabled={!secretWord.trim() || isSubmitting}
+                            style={{ marginTop: '30px' }}
                         >
                             <Check size={20} /> SCELLER L'OBJET
                         </button>
-                    </form>
+                    </div>
                 </>
             ) : (
                 <>

@@ -46,10 +46,10 @@ export const joinLobby = async (req, res) => {
 
     if (settings.status === 'PLAYING') {
       if (userId) {
-          const isAlreadyIn = await redis.hExists(`lobby:${lobbyId}:players`, userId);
-          if (isAlreadyIn) {
-              return res.status(200).json({ status: 'success', data: { lobbyId } }); 
-          }
+        const isAlreadyIn = await redis.hExists(`lobby:${lobbyId}:players`, userId);
+        if (isAlreadyIn) {
+          return res.status(200).json({ status: 'success', data: { lobbyId } });
+        }
       }
       return res.status(403).json({ status: 'error', message: 'This lobby has already started' });
     }
@@ -118,14 +118,14 @@ export const initLobbySocket = (io) => {
       const existingPlayerRaw = await redis.hGet(`${lobbyKey}:players`, userId);
 
       if (settings.status === 'PLAYING') {
-         if (existingPlayerRaw) {
-             console.log(`[Lobby] Reconnection ${userId} to the game, automatically redirecting to the game`);
-             return socket.emit('game_starting', { 
-                 gameType: 'phantom-ink', 
-             });
-         } else {
-             return socket.emit('error_join', 'This lobby has already started');
-         }
+        if (existingPlayerRaw) {
+          console.log(`[Lobby] Reconnection ${userId} to the game, automatically redirecting to the game`);
+          return socket.emit('game_starting', {
+            gameType: 'phantom-ink',
+          });
+        } else {
+          return socket.emit('error_join', 'This lobby has already started');
+        }
       }
 
       let playerObj;
@@ -173,23 +173,44 @@ export const initLobbySocket = (io) => {
       const { lobbyId, userId } = socket.data;
       if (lobbyId && userId) {
         const timeout = setTimeout(async () => {
+          const lobbyKey = `lobby:${lobbyId}`;
 
-          const settingsRaw = await redis.get(`lobby:${lobbyId}:settings`);
+          const settingsRaw = await redis.get(`${lobbyKey}:settings`);
           if (settingsRaw) {
-              const settings = JSON.parse(settingsRaw);
-              // Si la partie a commencé, on annule la suppression !
-              if (settings.status === 'PLAYING') {
-                  console.log(`[Lobby] Le joueur ${userId} est dans le jeu, on le garde en mémoire.`);
-                  disconnectTimeouts.delete(userId);
-                  return;
-              }
+            const settings = JSON.parse(settingsRaw);
+            // Si la partie a commencé, on annule la suppression !
+            if (settings.status === 'PLAYING') {
+              console.log(`[Lobby] Le joueur ${userId} est dans le jeu, on le garde en mémoire.`);
+              disconnectTimeouts.delete(userId);
+              return;
+            }
           }
 
-          console.log(`[Lobby] Permanent deletion of ${userId}`);
-          await redis.hDel(`lobby:${lobbyId}:players`, userId);
+          // 🌟 1. On vérifie si le joueur qui part était l'hôte
+          const playerRaw = await redis.hGet(`${lobbyKey}:players`, userId);
+          const wasHost = playerRaw ? JSON.parse(playerRaw).isHost : false;
 
-          const playersMap = await redis.hGetAll(`lobby:${lobbyId}:players`);
-          const playersList = Object.values(playersMap).map(p => JSON.parse(p));
+          console.log(`[Lobby] Permanent deletion of ${userId}`);
+          await redis.hDel(`${lobbyKey}:players`, userId);
+
+          // 🌟 2. On récupère les joueurs restants
+          const playersMap = await redis.hGetAll(`${lobbyKey}:players`);
+          let playersList = Object.values(playersMap).map(p => JSON.parse(p));
+
+          // 🌟 3. Si l'hôte est parti et qu'il reste du monde, on nomme un nouveau chef !
+          if (wasHost && playersList.length > 0) {
+            const newHost = playersList[0]; // On prend le premier joueur de la liste
+            newHost.isHost = true;
+
+            // On sauvegarde la promotion dans Redis
+            await redis.hSet(`${lobbyKey}:players`, newHost.id, JSON.stringify(newHost));
+            console.log(`[Lobby] Passation de pouvoir : ${newHost.username} devient l'hôte.`);
+
+            // On met à jour notre liste locale pour l'envoi au client
+            playersList[0] = newHost;
+          }
+
+          // On envoie la liste mise à jour à tout le monde
           io.to(lobbyId).emit('player_list_update', playersList);
 
           disconnectTimeouts.delete(userId);
@@ -268,6 +289,10 @@ export const initLobbySocket = (io) => {
       if (!lobbyId || !userId) return;
 
       const lobbyKey = `lobby:${lobbyId}`;
+      const playersMap = await redis.hGetAll(`${lobbyKey}:players`);
+      const playersList = Object.values(playersMap).map(p => JSON.parse(p));
+      if (playersList.length <= 2) return;
+
       const playerRaw = await redis.hGet(`${lobbyKey}:players`, userId);
 
       if (playerRaw) {

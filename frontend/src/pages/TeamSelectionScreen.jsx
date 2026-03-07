@@ -65,7 +65,6 @@ export const TeamSelectionScreen = ({ game, socket }) => {
             </div>
 
             {/* --- CAS SPÉCIAL 3 JOUEURS : L'ESPRIT PARTAGÉ --- */}
-            {playerCount === 3 && (
                 <div className="shared-spirit-zone">
                     <h3 style={{ color: 'var(--primary)', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
                         <Ghost /> L'Esprit Omniscient (Commun aux deux équipes)
@@ -81,7 +80,6 @@ export const TeamSelectionScreen = ({ game, socket }) => {
                         currentPlayers={playersList.filter(p => p.team === TEAMS.BOTH && p.role === ROLES.SPIRIT)} 
                     />
                 </div>
-            )}
 
             <div className="teams-grid">
                 {/* --- ÉQUIPE SOLEIL --- */}
@@ -89,7 +87,7 @@ export const TeamSelectionScreen = ({ game, socket }) => {
                     <div className="team-header"><Sun /> Équipe Soleil</div>
                     
                     {/* On n'affiche la boîte Esprit Soleil que s'il y a 4 joueurs ou plus */}
-                    {playerCount !== 3 && (
+                    {playerCount > 3 && (
                         <RoleBox 
                             title="Esprit(s)" icon={Ghost} team={TEAMS.SUN} role={ROLES.SPIRIT} 
                             currentPlayers={game.teams.sun.spirits || []} 
@@ -107,7 +105,7 @@ export const TeamSelectionScreen = ({ game, socket }) => {
                     <div className="team-header"><Moon /> Équipe Lune</div>
                     
                     {/* On n'affiche la boîte Esprit Lune que s'il y a 4 joueurs ou plus */}
-                    {playerCount !== 3 && (
+                    {playerCount > 3 && (
                         <RoleBox 
                             title="Esprit(s)" icon={Ghost} team={TEAMS.MOON} role={ROLES.SPIRIT} 
                             currentPlayers={game.teams.moon.spirits || []} 

@@ -1,6 +1,6 @@
 // src/pages/PlayingBoard.jsx
 import React, { useState, useEffect } from 'react';
-import { Send, Hand, HelpCircle, Eye as EyeIcon, Sun, Moon, RefreshCcw } from 'lucide-react';
+import { Send, Hand, HelpCircle, Eye as EyeIcon, Sun, Moon, RefreshCcw, Check } from 'lucide-react';
 import Card from '../components/Card';
 import CarnetBoard from '../components/CarnetBoard';
 import PlayerHand from '../components/PlayerHand';
@@ -16,9 +16,12 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
 
     const [liveClue, setLiveClue] = useState("");
     const [guessInput, setGuessInput] = useState("");
-    const [selectedCards, setSelectedCards] = useState([]);
     const [eyeInput, setEyeInput] = useState("");
     const [showMulliganModal, setShowMulliganModal] = useState(false);
+    const [selections, setSelections] = useState([]);
+
+    const uniqueSelectedCardIds = [...new Set(selections.map(s => s.cardId))];
+
 
     // 🌟 NOUVEAU : État pour ouvrir la modale d'historique ('SUN', 'MOON', ou null)
     const [historyModal, setHistoryModal] = useState(null);
@@ -29,28 +32,148 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
         socket.on('clue_updated', handleClueUpdated);
         return () => socket.off('clue_updated', handleClueUpdated);
     }, [socket, game.currentTurn]);
-    useEffect(() => {
-        if (!isMyTurn || turnState.action === 'GUESS_OBJECT') setSelectedCards([]);
-        if (!isMyTurn) setEyeInput("");
-    }, [isMyTurn, turnState.action]);
 
-    // --- ACTIONS --- (les mêmes qu'avant)
-    const toggleCardSelection = (cardId) => {
-        if (selectedCards.includes(cardId)) setSelectedCards(selectedCards.filter(id => id !== cardId));
-        else if (selectedCards.length < 2) setSelectedCards([...selectedCards, cardId]);
-    };
+    // --- ACTIONS ---
     const handleProposeQuestions = () => {
-        if (selectedCards.length !== 2) return;
-        socket.emit('propose_questions', { gameId: game.gameId, team: activeTeam, cardId1: selectedCards[0], cardId2: selectedCards[1] });
-        setSelectedCards([]);
+        // On vérifie qu'il y a exactement 2 cartes UNIQUES sur la table
+        if (uniqueSelectedCardIds.length !== 2) return;
+
+        socket.emit('propose_questions', {
+            gameId: game.gameId,
+            team: activeTeam,
+            cardId1: uniqueSelectedCardIds[0],
+            cardId2: uniqueSelectedCardIds[1]
+        });
+
+        // On vide les sélections (locales et via le serveur)
+        setSelections([]);
+        socket.emit('update_selections', {
+            gameId: game.gameId,
+            team: activeTeam,
+            remoteSelections: []
+        });
     };
+
+    const handleSelectQuestion = () => {
+        // On s'assure qu'une seule carte unique est sélectionnée par les esprits
+        if (uniqueSelectedCardIds.length !== 1) return;
+
+        socket.emit('select_question', {
+            gameId: game.gameId,
+            team: activeTeam,
+            qId: uniqueSelectedCardIds[0]
+        });
+
+        // On nettoie le plateau pour tout le monde
+        setSelections([]);
+        socket.emit('update_selections', {
+            gameId: game.gameId,
+            team: activeTeam,
+            remoteSelections: []
+        })
+    }
 
     const handleGuess = (e) => {
         e.preventDefault();
         if (!guessInput.trim() || guessInput.length > 1) return;
-        socket.emit('guess_letter', { gameId: game.gameId, team: activeTeam, letter: guessInput.trim().charAt(0) });
+
+        // 1. On envoie la tentative au moteur du jeu
+        socket.emit('guess_letter', {
+            gameId: game.gameId,
+            team: activeTeam,
+            letter: guessInput.trim().charAt(0)
+        });
+
+        // 2. On vide l'input localement pour celui qui a cliqué
         setGuessInput("");
+
+        // 3. 🌟 NOUVEAU : On prévient les copains de vider leur input aussi !
+        socket.emit('typing_guess_input', {
+            gameId: game.gameId,
+            team: activeTeam,
+            letter: ""
+        });
     };
+    // 🌟 1. Écouter ce que tape le partenaire
+    useEffect(() => {
+        const handleGuessTyping = ({ team, letter }) => {
+            if (team === activeTeam) {
+                setGuessInput(letter);
+            }
+        };
+
+        socket.on('guess_input_updated', handleGuessTyping);
+        return () => socket.off('guess_input_updated', handleGuessTyping);
+    }, [socket, activeTeam]);
+
+    // 🌟 2. Modifier le onChange de l'input Guess
+    const handleGuessChange = (val) => {
+        setGuessInput(val);
+
+        // On synchronise en direct
+        socket.emit('typing_guess_input', {
+            gameId: game.gameId,
+            team: activeTeam,
+            letter: val
+        });
+    };
+
+    useEffect(() => {
+        const handleEyeTyping = ({ team, letter }) => {
+            // On vérifie que c'est bien notre équipe
+            if (team === myProfile.team) {
+                setEyeInput(letter);
+            }
+        };
+
+        socket.on('eye_input_updated', handleEyeTyping);
+        return () => socket.off('eye_input_updated', handleEyeTyping);
+    }, [socket, myProfile.team]);
+
+    const handleEyeInputChange = (e) => {
+        const val = e.target.value.slice(-1).toUpperCase();
+        let sanitizedVal = "";
+
+        if (val.match(/[A-Z \-_.]/)) {
+            sanitizedVal = val.replace(/ /g, '_');
+        } else if (val === "") {
+            sanitizedVal = "";
+        } else {
+            return; // Si c'est un caractère non autorisé, on ne fait rien
+        }
+
+        setEyeInput(sanitizedVal);
+
+        // On synchronise avec l'autre Esprit
+        socket.emit('typing_eye_input', {
+            gameId: game.gameId,
+            team: myProfile.team,
+            letter: sanitizedVal
+        });
+    };
+
+    const handleEyeSubmit = (e) => {
+        e.preventDefault();
+        if (eyeInput) {
+            socket.emit('reveal_eye_letter', {
+                gameId: game.gameId,
+                team: myProfile.team,
+                letter: eyeInput
+            });
+
+            // On vide notre input
+            setEyeInput("");
+
+            // On prévient l'autre esprit de vider le sien
+            socket.emit('typing_eye_input', {
+                gameId: game.gameId,
+                team: myProfile.team,
+                letter: ""
+            });
+        }
+    };
+
+
     const handleEyeClick = (targetTeam, targetIndex) => { socket.emit('use_eye_power', { gameId: game.gameId, team: activeTeam, targetTeam, targetIndex }); };
     const handleTypeLetter = (e) => {
         const sanitizedText = e.target.value.replace(/[^a-zA-Z _.]/g, '').toUpperCase().replace(/ /g, '_');
@@ -66,13 +189,65 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
     // Valide vraiment l'action vers le serveur
     const confirmMulligan = () => {
         socket.emit('use_mulligan', { gameId: game.gameId, team: activeTeam });
-        setSelectedCards([]);
         setShowMulliganModal(false);
     };
 
-    const getPlayerRole = (playerId) => {
-        if (game.teamSun.ghost === playerId || game.teamMoon.ghost === playerId) return "ESPRIT";
-        return "MÉDIUM";
+    // 🌟 1. État des sélections détaillées
+
+    // 🌟 2. Écouteur de mise à jour synchronisée
+    useEffect(() => {
+        const handleSelectionSync = ({ team, remoteSelections }) => {
+            if (team === activeTeam) {
+                setSelections(remoteSelections);
+            }
+        };
+        socket.on('selections_synced', handleSelectionSync);
+        return () => socket.off('selections_synced', handleSelectionSync);
+    }, [socket, activeTeam]);
+
+    // 🌟 3. Fonction de sélection enrichie
+    const toggleCardSelection = (cardId) => {
+        if (!isMyTurn) return;
+
+        // Le Médium ne peut sélectionner que s'il n'y a pas d'action en cours (État 0)
+        if (isMedium && turnState.action) return;
+
+        // L'Esprit ne peut sélectionner que s'il doit choisir une question (État 1)
+        if (isSpirit && turnState.action !== 'ASK_QUESTION') return;
+
+        let newSelections = [...selections];
+        const myId = myProfile.id || socket.id;
+        const mySelectionIndex = newSelections.findIndex(s => s.userId === myId && s.cardId === cardId);
+
+        if (mySelectionIndex !== -1) {
+            // On clique sur la même carte : on annule la sélection
+            newSelections.splice(mySelectionIndex, 1);
+        } else {
+            if (isSpirit) {
+                // L'esprit n'a droit qu'à 1 choix. S'il a déjà choisi, on retire l'ancien.
+                const oldIndex = newSelections.findIndex(s => s.userId === myId);
+                if (oldIndex !== -1) newSelections.splice(oldIndex, 1);
+            } else {
+                // Le médium a droit à 2 choix maximum
+                const myCardsCount = newSelections.filter(s => s.userId === myId).length;
+                if (myCardsCount >= 2) return;
+            }
+
+            // On ajoute la nouvelle sélection
+            newSelections.push({
+                cardId: cardId,
+                userId: myId,
+                userName: myProfile.username,
+                color: myProfile.color || 'var(--primary)'
+            });
+        }
+
+        setSelections(newSelections);
+        socket.emit('update_selections', {
+            gameId: game.gameId,
+            team: activeTeam,
+            remoteSelections: newSelections
+        });
     };
 
     // --- LE MENU LATÉRAL DE CHAQUE ÉQUIPE ---
@@ -186,9 +361,14 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
                 {/* ÉTAT 0 : Médium choisit de Proposer ou Deviner */}
                 {isMedium && isMyTurn && !turnState.action && (
                     <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
-                        <button className="ghost-button btn-primary" onClick={handleProposeQuestions} disabled={selectedCards.length !== 2}>
-                            <HelpCircle size={18} /> PROPOSER ({selectedCards.length}/2)
+                        <button
+                            className="ghost-button btn-primary"
+                            onClick={handleProposeQuestions}
+                            disabled={uniqueSelectedCardIds.length !== 2}
+                        >
+                            <HelpCircle size={18} /> PROPOSER ({uniqueSelectedCardIds.length}/2)
                         </button>
+
                         <button className="ghost-button btn-primary" onClick={() => socket.emit('guess_letter', { gameId: game.gameId, team: activeTeam, letter: '' })}>
                             <EyeIcon size={18} /> DEVINER L'OBJET
                         </button>
@@ -205,12 +385,36 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
                 {/* ÉTAT 1 : L'Esprit choisit une question */}
                 {isSpirit && isMyTurn && turnState.action === 'ASK_QUESTION' && !turnState.selectedQuestion && (
                     <div className="bottom-action-panel active-turn">
-                        <h4 style={{ color: 'var(--primary)', marginBottom: '20px' }}>Vos Médiums vous propose ces deux questions :</h4>
-                        <div style={{ display: 'flex', gap: '15px' }}>
-                            {turnState.pendingQuestions?.map(q => (
-                                <Card key={q.id} card={q} isFaceUp={true} onClick={() => socket.emit('select_question', { gameId: game.gameId, team: activeTeam, qId: q.id })} />
-                            ))}
+                        <h4 style={{ color: 'var(--primary)', marginBottom: '20px' }}>Vos Médiums vous proposent ces deux questions :</h4>
+
+                        <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
+                            {turnState.pendingQuestions?.map(q => {
+                                // On récupère les badges comme pour la main du Médium
+                                const cardBadges = selections.filter(s => s.cardId === q.id);
+                                const isSelected = cardBadges.length > 0;
+
+                                return (
+                                    <Card
+                                        key={q.id}
+                                        card={q}
+                                        isFaceUp={true}
+                                        isSelected={isSelected}
+                                        selectionBadges={cardBadges}
+                                        onClick={() => toggleCardSelection(q.id)}
+                                    />
+                                );
+                            })}
                         </div>
+
+                        {/* Le Bouton de Validation */}
+                        <button
+                            className="ghost-button btn-primary"
+                            onClick={handleSelectQuestion}
+                            disabled={uniqueSelectedCardIds.length !== 1}
+                        >
+                            <Check size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                            VALIDER LA QUESTION
+                        </button>
                     </div>
                 )}
 
@@ -240,15 +444,9 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
                         <p style={{ fontSize: '1.2rem', marginBottom: '15px' }}>Devinez l'objet secret :</p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                             <span className="current-guess-word giant-text">{turnState.currentGuessingWord || ""}</span>
-                            <input type="text" maxLength="1" className="ghost-input giant-input" style={{ width: '60px' }} value={guessInput} onChange={(e) => {
-                                // 🌟 NOUVEAU : On transforme l'espace tapé en underscore
-                                let val = e.target.value.toUpperCase().replace(/ /g, '_');
-
-                                // On autorise les lettres, le point, le underscore, ou le vide !
-                                if (val.match(/[A-Z._]/) || val === "") {
-                                    setGuessInput(val);
-                                }
-                            }} autoFocus />
+                            <input type="text" maxLength="1" className="ghost-input giant-input" style={{ width: '60px' }} value={guessInput} onChange={
+                                (e) => handleGuessChange(e.target.value.toUpperCase().replace(/ /g, '_'))
+                            } autoFocus />
                             <button type="submit" className="ghost-button btn-primary giant-btn" disabled={!guessInput} style={{ padding: '0 20px' }}><Send size={24} /></button>
                         </div>
                         <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginTop: '15px' }}>Tapez un point '.' pour valider la victoire.</p>
@@ -259,7 +457,7 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
                 {isMedium && isMyTurn && turnState.action === 'EYE_POWER_SELECTION' && (
                     <div className="bottom-action-panel active-turn">
                         <p style={{ color: '#fcd34d', fontSize: '1.3rem', marginBottom: '10px' }}><EyeIcon size={24} style={{ verticalAlign: 'middle', marginRight: '10px' }} /> Pouvoir de l'Œil</p>
-                        <span style={{ marginBottom: '20px' }}>Choisissez un indice <span style={{color:'#fcd34d'}}>jaune</span> pour révéler une lettre</span>
+                        <span style={{ marginBottom: '20px' }}>Choisissez un indice <span style={{ color: '#fcd34d' }}>jaune</span> pour révéler une lettre</span>
                         <button className="ghost-button btn-primary" onClick={() => socket.emit('skip_eye_power', { gameId: game.gameId, team: activeTeam })}>
                             Passer ce pouvoir
                         </button>
@@ -267,15 +465,36 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
                 )}
 
                 {/* ÉTAT 6 : L'Esprit ciblé révèle la lettre de l'Oeil */}
+                {/* ÉTAT 6 : L'Esprit ciblé révèle la lettre de l'Oeil */}
                 {amITargetSpirit && turnState.action === 'EYE_POWER_REVEAL' && (
-                    <form onSubmit={(e) => { e.preventDefault(); if (eyeInput) { socket.emit('reveal_eye_letter', { gameId: game.gameId, team: myProfile.team, letter: eyeInput }); setEyeInput(""); } }} className="bottom-action-panel">
-                        <p style={{ color: 'var(--primary)', marginBottom: '15px', fontSize: '1.1rem' }}><EyeIcon size={20} style={{ verticalAlign: 'middle' }} /> Révélez une lettre de : <strong>{turnState.eyeTarget.questionId}</strong></p>
+                    <form onSubmit={handleEyeSubmit} className="bottom-action-panel">
+                        <p style={{ color: 'var(--primary)', marginBottom: '15px', fontSize: '1.1rem' }}>
+                            <EyeIcon size={20} style={{ verticalAlign: 'middle' }} /> Révélez une lettre de : <strong>{turnState.eyeTarget.questionId}</strong>
+                        </p>
+
                         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                             <span className="current-guess-word giant-text">{turnState.eyeTarget.currentText}</span>
-                            <input type="text" maxLength="1" className="ghost-input giant-input" value={eyeInput} onChange={(e) => { const val = e.target.value.slice(-1).toUpperCase(); if (val.match(/[A-Z \-_.]/)) setEyeInput(val.replace(/ /g, '_')); else if (val === "") setEyeInput(""); }} autoFocus />
-                            <button type="submit" className="ghost-button btn-primary giant-btn" disabled={!eyeInput} style={{ padding: '0 20px' }}><Send size={24} /></button>
+                            <input
+                                type="text"
+                                maxLength="1"
+                                className="ghost-input giant-input"
+                                value={eyeInput}
+                                onChange={handleEyeInputChange}
+                                autoFocus
+                            />
+                            <button
+                                type="submit"
+                                className="ghost-button btn-primary giant-btn"
+                                disabled={!eyeInput}
+                                style={{ padding: '0 20px' }}
+                            >
+                                <Send size={24} />
+                            </button>
                         </div>
-                        <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginTop: '15px' }}>Tapez la lettre et validez (ou un point '.' si le mot est déjà fini).</p>
+
+                        <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginTop: '15px' }}>
+                            Tapez la lettre et validez (ou un point '.' si le mot est déjà fini).
+                        </p>
                     </form>
                 )}
 
@@ -287,7 +506,7 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
                             hand={teamData.hand}
                             isMyTurn={isMyTurn}
                             actionState={turnState.action}
-                            selectedCards={selectedCards}
+                            selectedCards={selections}
                             onToggleCard={toggleCardSelection}
                             onMulligan={handleMulliganClick}
                             mulliganUsed={teamData.mulliganUsed}

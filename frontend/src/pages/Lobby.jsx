@@ -4,6 +4,7 @@ import { io } from 'socket.io-client';
 import { useUser } from '../hooks/useUser';
 import { Ghost, Send, Copy, Play, LogOut, Settings, CheckCircle, Crown } from 'lucide-react';
 import { PlayerModal } from '../components/ui/PlayerModal';
+import './Lobby.css'; // 🌟 AJOUTE TON IMPORT CSS ICI
 
 function Lobby() {
     const { gameId } = useParams();
@@ -134,21 +135,6 @@ function Lobby() {
         socketRef.current.emit('force_start');
     };
 
-    // --- Styles Inline ---
-    const containerStyle = {
-        display: 'grid',
-        gridTemplateColumns: '300px 1fr',
-        gap: '20px',
-        maxWidth: '1200px',
-        width: '100%',
-        height: '60vh',
-        margin: '0 auto'
-    };
-
-    if (window.innerWidth < 768) {
-        containerStyle.gridTemplateColumns = '1fr';
-        containerStyle.gridTemplateRows = 'auto 1fr';
-    }
 
     return (
         <>
@@ -159,14 +145,22 @@ function Lobby() {
                 <LogOut size={20} />
                 <span style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>QUITTER</span>
             </button>
-            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
 
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', padding: '0 15px', boxSizing: 'border-box' }}>
+
+                {/* --- LE MAGNIFIQUE TITRE --- */}
+                <div className="game-logo-banner">
+                    <span className="logo-spark">✦</span>
+                    <h1 className="game-main-title">PHANTOM INK</h1>
+                    <span className="logo-spark">✦</span>
+                </div>
 
 
                 {/* --- Header --- */}
-                <div className="ghost-card" style={{ maxWidth: '1200px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 30px' }}>
+                {/* 🌟 Utilisaton de la classe lobby-header-card */}
+                <div className="ghost-card lobby-header-card">
                     <div>
-                        <h2 className="ghost-title" style={{ fontSize: '1.5rem', textAlign: 'left', margin: 0 }}>Phantom Ink</h2>
+                        <h2 className="ghost-title" style={{ fontSize: '1.2rem', textAlign: 'left', margin: 0, paddingBottom: "5px" }}>game.rayquest.fr</h2>
                         <div style={{ color: 'var(--primary)', fontFamily: 'monospace', fontSize: '1.2rem', display: 'flex', gap: '10px', alignItems: 'center' }}>
                             Lien: {gameId} -{'>'}
                             <Copy size={16} style={{ cursor: 'pointer', opacity: 0.8 }} onClick={copyInviteLink} />
@@ -174,17 +168,18 @@ function Lobby() {
                     </div>
 
                     {myProfile.isHost && (
-                        <button className="ghost-button btn-primary" style={{ width: 'auto' }} onClick={forceStart}>
+                        <button className="ghost-button btn-primary" style={{ maxWidth: "300px" }} onClick={forceStart}>
                             <Play size={16} /> FORCER LE LANCEMENT
                         </button>
                     )}
                 </div>
 
                 {/* --- Main Content Grid --- */}
-                <div style={containerStyle}>
+                {/* 🌟 Remplacement du containerStyle JS par la classe CSS */}
+                <div className="lobby-grid-container">
 
                     {/* Colonne Gauche */}
-                    <div className="ghost-card" style={{ display: 'flex', flexDirection: 'column', padding: '20px', width: "auto" }}>
+                    <div className="ghost-card lobby-column">
                         <h3 className="label" style={{ marginBottom: '15px' }}>
                             <Ghost size={16} /> Nombre de joueurs ({players.length})
                         </h3>
@@ -219,9 +214,9 @@ function Lobby() {
                                     padding: '10px', marginBottom: '8px',
                                     background: 'rgba(255,255,255,0.05)', borderRadius: '8px', border: '1px solid var(--border-glass)'
                                 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, overflow: 'hidden' }}>
                                         <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: p.color || 'var(--primary)', boxShadow: `0 0 8px ${p.color || 'var(--primary)'}` }}></div>
-                                        <span style={{ color: p.color || 'var(--text-main)', fontWeight: p.id === userId ? 'bold' : 'normal' }}>
+                                        <span style={{ color: p.color || 'var(--text-main)', fontWeight: p.id === userId ? 'bold' : 'normal', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                             {p.username || `Spectre #${i + 1}`}
                                         </span>
                                     </div>
@@ -236,7 +231,7 @@ function Lobby() {
                     </div>
 
                     {/* Colonne Droite */}
-                    <div className="ghost-card" style={{ display: 'flex', flexDirection: 'column', padding: '20px', width: "auto" }}>
+                    <div className="ghost-card lobby-column">
                         <div style={{ flex: 1, overflowY: 'auto', marginBottom: '15px', paddingRight: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {messages.map((msg, i) => {
                                 const isMe = msg.sender === (socketRef.current?.auth?.username || 'Moi') || msg.isMe;
@@ -267,7 +262,7 @@ function Lobby() {
                             <input
                                 type="text"
                                 className="ghost-input"
-                                style={{ paddingRight: '40px', textAlign: 'left' }}
+                                style={{ paddingRight: '40px', textAlign: 'left', width: '100%', boxSizing: 'border-box' }}
                                 placeholder="..."
                                 value={inputText}
                                 onChange={(e) => setInputText(e.target.value)}

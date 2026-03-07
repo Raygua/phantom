@@ -184,3 +184,65 @@
         --sel-shift-2: 0px;
     }
 }
+
+.selection-badges-container {
+    position: absolute;
+    top: -25px;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    z-index: 150;
+    pointer-events: none;
+}
+
+.player-selection-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    color: white;
+    white-space: nowrap;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.2);
+    animation: badgePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    /* Petit décalage si plusieurs joueurs choisissent la même carte */
+    transform: translateY(calc(var(--index) * 5px)); 
+}
+
+@keyframes badgePop {
+    from { opacity: 0; transform: translateY(10px) scale(0.5); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* --- RESPONSIVE MOBILE POUR LES CARTES --- */
+@media (max-width: 1200px) {
+    /* 1. On désactive (ou on réduit drastiquement) la montée au survol */
+    .phantom-card-container:hover {
+        transform: translateY(-5px) scale(1); /* Juste un tout petit rebond */
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    }
+
+    /* 2. Pour la carte sélectionnée, on joue sur la lumière et le scale, pas sur la hauteur */
+    .phantom-card-container.selected {
+        transform: translateY(-10px) scale(1); /* Monte très peu, grossit un peu */
+        box-shadow: 0 0 20px rgba(20, 184, 166, 0.8), inset 0 0 10px rgba(20, 184, 166, 0.3);
+        border-color: rgba(20, 184, 166, 1);
+        z-index: 10;
+    }
+}
+
+@media (max-width: 750px) {
+    /* Sur téléphone pur, on réduit encore plus pour être sûr que ça rentre */
+    .phantom-card-container:hover {
+        transform: translateY(-2px);
+    }
+
+    .phantom-card-container.selected {
+        transform: translateY(-5px); /* Ne monte quasiment plus */
+        /* On renforce juste le côté visuel "allumé" */
+        box-shadow: 0 0 15px rgba(252, 211, 77, 0.8); 
+    }
+}

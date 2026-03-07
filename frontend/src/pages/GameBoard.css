@@ -406,10 +406,11 @@
     .player-hand-cards {
         display: flex;
         flex-wrap: nowrap;
-        /* 🌟 LE SECRET : On interdit de passer à la ligne ! */
         overflow-x: auto;
-        padding: 20px 15px;
-        /* De l'espace sur les côtés */
+        
+        /* 🌟 CHANGEMENT ICI : On passe à 40px en haut pour laisser respirer les badges */
+        padding: 40px 15px 20px 15px; 
+        
         gap: 15px;
         justify-content: flex-start;
         scroll-snap-type: x mandatory;
@@ -745,4 +746,35 @@
         font-size: 1.4rem;
         letter-spacing: 6px;
     }
+}
+
+.ghost-input-editable {
+    width: 100%;
+    min-height: 60px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 2px solid #334155;
+    color: var(--text-main);
+    font-size: 1.8rem;
+    font-family: monospace;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    outline: none;
+    transition: all 0.3s ease;
+    word-wrap: break-word; /* 🌟 Force le retour à la ligne si le mot est trop long */
+    overflow-wrap: break-word;
+    white-space: pre-wrap; /* Garde les espaces mais revient à la ligne */
+}
+
+.ghost-input-editable:focus {
+    border-color: var(--primary);
+    background: rgba(20, 184, 166, 0.05);
+}
+
+/* Gérer le placeholder sur une div contentEditable */
+.ghost-input-editable:empty:before {
+    content: attr(data-placeholder);
+    color: var(--text-muted);
+    opacity: 0.5;
+    pointer-events: none;
 }

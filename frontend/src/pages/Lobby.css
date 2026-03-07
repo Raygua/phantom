@@ -1,0 +1,144 @@
+/* --- LE BOUTON QUITTER (Flottant) --- */
+.btn-floating {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #ef4444;
+    padding: 10px 15px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-floating:hover {
+    background: #ef4444;
+    color: white;
+}
+
+/* --- LE TITRE DU JEU --- */
+.game-logo-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 20px; /* Un peu d'espace avant le header */
+    padding-top: 20px;
+}
+
+.game-main-title {
+    font-family: var(--font-serif);
+    font-size: 2.2rem;
+    letter-spacing: 12px;
+    margin: 0;
+    background: linear-gradient(to bottom, #ffffff, #94a3b8);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.2));
+    text-transform: uppercase;
+}
+
+.logo-spark {
+    color: var(--primary);
+    font-size: 1.5rem;
+    opacity: 0.6;
+    animation: pulseGlow 3s infinite ease-in-out;
+}
+
+@keyframes pulseGlow {
+    0%, 100% { opacity: 0.8; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* --- LE LOBBY HEADER (game.rayquest.fr + Lancer) --- */
+.lobby-header-card {
+    max-width: 1200px !important;
+    width: 100%;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 30px;
+    box-sizing: border-box;
+}
+
+/* --- LA GRILLE PRINCIPALE (Joueurs + Chat) --- */
+.lobby-grid-container {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 20px;
+    max-width: 1200px;
+    width: 100%;
+    height: 60vh;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+.lobby-column {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    width: auto;
+}
+
+
+/* --- RESPONSIVE MOBILE --- */
+@media (max-width: 768px) {
+    /* 1. On modifie la grille pour qu'elle passe sur 1 seule colonne */
+    .lobby-grid-container {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr; /* Le chat prend le reste de l'espace */
+        height: auto; /* On laisse le contenu dicter la hauteur sur mobile */
+        min-height: 70vh; /* Mais on s'assure qu'il y a assez de place pour le chat */
+    }
+
+    /* 2. On empêche la liste des joueurs de prendre tout l'écran */
+    .lobby-grid-container > :first-child {
+        max-height: 40vh; /* Limite la liste à 40% de l'écran */
+    }
+
+    /* 3. On réorganise le Header (le lien et le bouton de lancement) */
+    .lobby-header-card {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 15px;
+        padding: 15px 20px;
+    }
+    
+    .lobby-header-card .ghost-button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* 4. On ajuste le Titre pour qu'il rentre sur l'écran */
+    .game-logo-banner {
+        margin-top: 60px; /* On pousse le titre vers le bas pour ne pas qu'il touche le bouton Quitter ! */
+        gap: 10px;
+    }
+    
+    .game-main-title {
+        font-size: 1.5rem;
+        letter-spacing: 6px;
+        text-align: center;
+    }
+
+    /* 5. Sur petit écran, le bouton "Quitter" garde sa place mais on cache le texte pour qu'il prenne moins de place */
+    .btn-floating span {
+        display: none;
+    }
+    .btn-floating {
+        padding: 10px; 
+    }
+}
+
+@media (max-width: 615px) {
+    .lobby-header-card {
+        flex-direction: column;
+    }
+}

@@ -1,10 +1,7 @@
 // src/components/Card.jsx
-import React from 'react';
 import './Card.css'; // On importe le CSS qu'on vient de créer
 
-const Card = ({ card, isFaceUp = true, isSelected = false, onClick, style, isSpirit = false }) => {
-    
-    // Si la carte n'a pas de données et est face cachée (pour la pioche par ex)
+const Card = ({ card, isFaceUp, isSelected, onClick, style, selectionBadges = [], isSpirit }) => {
     const displayCard = card || { id: "???", text: "" };
 
     return (
@@ -13,6 +10,19 @@ const Card = ({ card, isFaceUp = true, isSelected = false, onClick, style, isSpi
             onClick={onClick}
             style={style}
         >
+            {/* 🌟 NOUVEAU : Les badges de joueurs au-dessus de la carte */}
+            <div className="selection-badges-container">
+                {selectionBadges.map((badge, i) => (
+                    <div 
+                        key={i} 
+                        className="player-selection-badge" 
+                        style={{ backgroundColor: badge.color, '--index': i }}
+                    >
+                        {badge.userName}
+                    </div>
+                ))}
+            </div>
+
             <div className="phantom-card-inner">
                 {/* RECTO (Face visible) */}
                 <div className={`phantom-card-face phantom-card-front ${isSpirit ? 'isSpirit' : ''}`}>

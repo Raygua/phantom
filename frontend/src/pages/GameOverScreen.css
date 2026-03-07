@@ -1,0 +1,276 @@
+/* src/pages/GameOverScreen.css */
+
+/* On recrée la base du conteneur pour l'écran de fin */
+.game-container.scrollable-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 1600px;
+    height: 100vh;
+    height: 100dvh;
+    margin: 0 auto;
+    padding: 20px 10px;
+    box-sizing: border-box;
+    overflow-y: auto; /* Autorise le scroll si ça déborde */
+    align-items: center; /* Centre le contenu horizontalement */
+    justify-content: flex-start; /* Commence en haut pour permettre le scroll vers le bas */
+}
+
+/* --- ÉCRAN DE VICTOIRE (Base) --- */
+.expanded-wrapper {
+    width: 100%;
+    max-width: 1200px; /* Plus large pour accueillir les deux colonnes */
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: 50px;
+    text-align: center;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8);
+    animation: dropIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+    margin-bottom: 40px; /* Espace en bas pour le scroll */
+}
+
+@keyframes dropIn {
+    0% { transform: scale(0.9) translateY(-30px); opacity: 0; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.victory-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.victory-header.sun-win { color: #fcd34d; text-shadow: 0 0 20px rgba(252, 211, 77, 0.5); }
+.victory-header.moon-win { color: #a78bfa; text-shadow: 0 0 20px rgba(167, 139, 250, 0.5); }
+
+.trophy-icon { animation: floatTrophy 3s ease-in-out infinite; }
+
+@keyframes floatTrophy {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+}
+
+.victory-title {
+    font-family: var(--font-serif);
+    font-size: 2.5rem;
+    letter-spacing: 8px;
+    margin: 0;
+}
+
+.secret-reveal-box {
+    margin: 30px 0;
+    padding: 30px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.giant-secret-word {
+    font-family: monospace;
+    font-size: 4rem;
+    font-weight: bold;
+    color: white;
+    letter-spacing: 15px;
+    text-transform: uppercase;
+    margin-top: 15px;
+    text-shadow: 0 0 30px rgba(255, 255, 255, 0.8);
+    word-break: break-word;
+}
+
+/* --- LE DEBRIEFING (Version Cartes) --- */
+.debriefing-section {
+    width: 100%;
+    margin-top: 50px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 40px;
+}
+
+.debriefing-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    font-family: var(--font-serif);
+    font-size: 2.2rem;
+    color: white;
+    margin-bottom: 10px;
+}
+
+.debriefing-subtitle {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 1.1rem;
+    margin-bottom: 40px;
+}
+
+.debriefing-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    width: 100%;
+}
+
+.debrief-card {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+}
+
+.debrief-card.winner-card {
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 30px rgba(255, 255, 255, 0.05);
+}
+
+.debrief-team-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-family: var(--font-serif);
+    font-size: 1.8rem;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.debrief-team-title.sun { color: #fcd34d; }
+.debrief-team-title.moon { color: #a78bfa; }
+
+/* Timeline Container */
+.debrief-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Un élément de la timeline : Carte à gauche, Résultat à droite */
+.debrief-timeline-item {
+    display: flex;
+    align-items: center;
+    gap: 30px; /* Un peu plus d'espace pour respirer */
+    background: rgba(255, 255, 255, 0.02);
+    padding: 20px;
+    border-radius: 16px;
+    transition: background 0.2s;
+}
+
+.debrief-timeline-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* On réduit la taille de la carte pour qu'elle s'intègre bien */
+.debrief-card-wrapper {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* On laisse la carte imposer sa propre taille */
+}
+
+/* Le résultat écrit par l'Esprit ou le résultat du Guess */
+.debrief-result {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: left;
+}
+
+.debrief-answer {
+    font-family: monospace;
+    color: var(--primary);
+    letter-spacing: 4px;
+    font-size: 1.5rem;
+    text-transform: uppercase;
+}
+
+/* Statuts spécifiques pour les devinettes */
+.success-text {
+    color: #10b981; /* Vert */
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.1rem;
+}
+
+.error-text {
+    color: #ef4444; /* Rouge */
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.1rem;
+}
+
+/* 📱 Responsive Mobile */
+@media (max-width: 900px) {
+    .debriefing-grid { grid-template-columns: 1fr; }
+    
+    .giant-secret-word {
+        font-size: 2.5rem;
+        letter-spacing: 8px;
+    }
+    
+    .expanded-wrapper {
+        padding: 30px 15px;
+    }
+
+    .debrief-timeline-item {
+        flex-direction: column;
+        align-items: center; /* On centre la carte sur mobile */
+        text-align: center;
+        gap: 15px;
+    }
+    
+    .debrief-result {
+        padding-left: 0;
+        margin-top: 5px;
+        align-items: center; /* Centre le texte sur mobile */
+    }
+    
+    .debrief-card-wrapper {
+        transform: scale(1);
+        transform-origin: top left;
+        margin-bottom: -15px; /* Compense le vide laissé par le scale */
+    }
+}
+
+/* Remplace ton ancien .game-container.scrollable-container par celui-ci */
+
+.game-container.scrollable-container {
+    display: flex;
+    flex-direction: column;
+    
+    /* 🌟 LE SECRET EST ICI : On annule la limite de largeur pour coller aux bords */
+    width: 100%;
+    max-width: none; 
+    margin: 0; 
+    
+    height: 100vh;
+    height: 100dvh; /* Pour mobile */
+    padding: 40px 10px; /* Un peu de marge en haut/bas pour respirer */
+    box-sizing: border-box;
+    
+    /* La barre de scroll sera maintenant sur le bord du navigateur ! */
+    overflow-y: auto; 
+    overflow-x: hidden;
+    
+    /* On centre le contenu intérieur (ton wrapper) */
+    align-items: center; 
+    justify-content: flex-start; 
+}
+
+/* On s'assure que ton wrapper garde sa belle largeur centrée */
+.expanded-wrapper {
+    width: 100%;
+    max-width: 1200px; /* C'est lui qui limite la largeur visuelle */
+    /* ... le reste de tes styles (background, border, etc.) ne bouge pas ... */
+    margin-bottom: 40px; /* Assure un peu d'espace sous le bloc en fin de scroll */
+}

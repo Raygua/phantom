@@ -5,7 +5,7 @@ import Card from './Card';
 
 const PlayerHand = ({ hand, isMyTurn, actionState, selectedCards, onToggleCard, isSpirit }) => {
     const scrollContainerRef = useRef(null);
-    
+
     // Variables pour le glisser-déposer
     const isDragging = useRef(false);
     const startX = useRef(0);
@@ -22,12 +22,12 @@ const PlayerHand = ({ hand, isMyTurn, actionState, selectedCards, onToggleCard, 
     const updateScrollStatus = () => {
         const el = scrollContainerRef.current;
         if (!el) return;
-        
+
         const { scrollLeft, clientWidth, scrollWidth } = el;
-        
+
         const isMobile = window.innerWidth <= 1200;
         let theoreticalWidth = 0;
-        
+
         if (isMobile) {
             theoreticalWidth = hand.length * (140 + 15); // Largeur + Gap
         } else {
@@ -35,14 +35,14 @@ const PlayerHand = ({ hand, isMyTurn, actionState, selectedCards, onToggleCard, 
         }
 
         const canLeft = scrollLeft > 10;
-        
+
         // 2. On compare la largeur théorique à la largeur de la fenêtre
         // On ajoute une marge de sécurité de 20px
         const canRight = theoreticalWidth > (clientWidth + 20);
-        
-        setScrollStatus({ 
-            canScrollLeft: canLeft, 
-            canScrollRight: canRight 
+
+        setScrollStatus({
+            canScrollLeft: canLeft,
+            canScrollRight: canRight
         });
     };
 
@@ -79,11 +79,11 @@ const PlayerHand = ({ hand, isMyTurn, actionState, selectedCards, onToggleCard, 
     const handleMouseDown = (e) => {
         const container = scrollContainerRef.current;
         if (!container) return;
-        
+
         isDragging.current = true;
         dragDistance.current = 0;
         container.style.cursor = 'grabbing';
-        
+
         startX.current = e.pageX - container.offsetLeft;
         scrollLeft.current = container.scrollLeft;
     };
@@ -101,17 +101,17 @@ const PlayerHand = ({ hand, isMyTurn, actionState, selectedCards, onToggleCard, 
     const handleMouseMove = (e) => {
         if (!isDragging.current) return;
         e.preventDefault();
-        
+
         const container = scrollContainerRef.current;
         const x = e.pageX - container.offsetLeft;
-        const walk = (x - startX.current) * 1.5; 
-        
+        const walk = (x - startX.current) * 1.5;
+
         container.scrollLeft = scrollLeft.current - walk;
         dragDistance.current += Math.abs(walk);
     };
 
     const handleCardClick = (cardId) => {
-        if (dragDistance.current > 15) return; 
+        if (dragDistance.current > 15) return;
         if (canSelect) onToggleCard(cardId);
     };
 
@@ -120,18 +120,18 @@ const PlayerHand = ({ hand, isMyTurn, actionState, selectedCards, onToggleCard, 
 
     return (
         <div className="bottom-hand-wrapper" style={{ position: 'relative' }}>
-            
+
             {/* 🌟 NOUVEAU : Indicateur Visuel GAUCHE */}
             <div className={`scroll-indicator left ${scrollStatus.canScrollLeft ? 'visible' : ''}`}>
                 <ChevronLeft size={36} />
             </div>
 
-            <div 
-                className="player-hand-cards" 
-                ref={scrollContainerRef} 
+            <div
+                className="player-hand-cards"
+                ref={scrollContainerRef}
                 onScroll={updateScrollStatus} /* 🌟 NOUVEAU : Met à jour quand on glisse */
-                style={{ 
-                    opacity: canSelect ? 1 : 0.6, 
+                style={{
+                    opacity: canSelect ? 1 : 0.6,
                     pointerEvents: 'auto',
                     cursor: 'grab'
                 }}
@@ -141,21 +141,31 @@ const PlayerHand = ({ hand, isMyTurn, actionState, selectedCards, onToggleCard, 
                 onMouseMove={handleMouseMove}
             >
                 {hand.map(card => {
-                    const isSelected = selectedCards.includes(card.id);
+                    // On trouve toutes les sélections pour CETTE carte précise
+                    const cardBadges = Array.isArray(selectedCards) 
+                        ? selectedCards.filter(s => s.cardId === card.id) 
+                        : [];
+                    const isSelected = cardBadges.length > 0;
+
                     return (
-                        <Card 
-                            key={card.id} 
-                            card={card} 
-                            isFaceUp={true} 
-                            isSelected={isSelected} 
-                            onClick={() => handleCardClick(card.id)} 
-                            isSpirit={isSpirit}
+                        <Card
+                            key={card.id}
+                            card={card}
+                            isFaceUp={true}
+                            isSelected={isSelected}
+                            selectionBadges={cardBadges} // 🌟 On passe les badges ici
+                            onClick={() => {
+                                // On ne déclenche le clic que si on n'a pas "draggé" (glissé)
+                                if (dragDistance.current < 10 && canSelect) {
+                                    onToggleCard(card.id);
+                                }
+                            }}
                         />
                     );
                 })}
             </div>
 
-                        {/* 🌟 NOUVEAU : Indicateur Visuel DROITE */}
+            {/* 🌟 NOUVEAU : Indicateur Visuel DROITE */}
             <div className={`scroll-indicator right ${scrollStatus.canScrollRight ? 'visible' : ''}`}>
                 <ChevronRight size={36} />
             </div>
