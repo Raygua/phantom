@@ -158,11 +158,58 @@ export const initPhantomSocket = (io) => {
       }
     });
 
+    socket.on('send_draw_stroke', (data) => {
+      // data contient : { gameId, team, x0, y0, x1, y1 }
+      // On transfère immédiatement le trait aux autres joueurs du salon SANS le sauvegarder en BDD (trop lourd)
+      socket.to(`game:${data.gameId}`).emit('receive_draw_stroke', data);
+    });
+
+    // --- L'ESPRIT EFFACE SON CADRE ---
+    socket.on('request_clear_pad', ({ gameId, team }) => {
+      io.to(`game:${gameId}`).emit('clear_live_pad', { team });
+    });
+
+    // --- L'ESPRIT VALIDE UNE LETTRE (Base64) ---
+    socket.on('commit_letter', ({ gameId, team, imageBase64 }) => {
+      try {
+        const game = gameManager.getGame(gameId);
+        game.commitLetter(team, imageBase64);
+
+        // On sauvegarde l'état global avec la nouvelle image intégrée
+        io.to(`game:${gameId}`).emit('game_state_update', game);
+      } catch (error) {
+        socket.emit('game_error', error.message);
+      }
+    });
+
+    // --- L'ESPRIT TERMINE SON MOT (BOUTON ".") ---
+    socket.on('end_word', ({ gameId, team }) => {
+      try {
+        const game = gameManager.getGame(gameId);
+        game.finishWord(team); // Scelle le mot et passe le tour
+
+        io.to(`game:${gameId}`).emit('game_state_update', game);
+      } catch (error) {
+        socket.emit('game_error', error.message);
+      }
+    });
+
+    socket.on('sync_live_image', ({ gameId, team, imageBase64 }) => {
+      try {
+        const game = gameManager.getGame(gameId);
+        if (game) game.syncLiveImage(team, imageBase64);
+      } catch (e) {
+        // Erreur silencieuse, pas grave pour un sync
+      }
+    });
+
     // --- LE MÉDIUM DIT SILENCIO ---
     socket.on('silencio', ({ gameId, team }) => {
       try {
         const game = gameManager.getGame(gameId);
         game.silencio(team); // Arrête le tour et passe à l'autre équipe
+
+        io.to(`game:${gameId}`).emit('clear_live_pad', { team });
 
         io.to(`game:${gameId}`).emit('silencio_called', { team });
         io.to(`game:${gameId}`).emit('game_state_update', game); // MAJ globale pour changer de tour
@@ -196,6 +243,27 @@ export const initPhantomSocket = (io) => {
       }
     });
 
+    socket.on('submit_guess_letter', ({ gameId, team, imageBase64, isDot }) => {
+      try {
+        const game = gameManager.getGame(gameId);
+        game.submitGuessLetter(team, imageBase64, isDot);
+        io.to(`game:${gameId}`).emit('game_state_update', game);
+      } catch (error) {
+        socket.emit('game_error', error.message);
+      }
+    });
+
+    // --- L'ESPRIT JUGE LA LETTRE (Accepter / Refuser) ---
+    socket.on('judge_guess_letter', ({ gameId, team, isCorrect }) => {
+      try {
+        const game = gameManager.getGame(gameId);
+        game.judgeGuessLetter(team, isCorrect);
+        io.to(`game:${gameId}`).emit('game_state_update', game);
+      } catch (error) {
+        socket.emit('game_error', error.message);
+      }
+    });
+
     // --- LE MÉDIUM UTILISE SON MULLIGAN ---
     socket.on('use_mulligan', ({ gameId, team }) => {
       try {
@@ -217,11 +285,21 @@ export const initPhantomSocket = (io) => {
       }
     });
 
-    // --- POUVOIR DE L'OEIL : REVELATION DE LETTRE ---
-    socket.on('reveal_eye_letter', ({ gameId, team, letter }) => {
+    socket.on('end_eye_power', ({ gameId, team, imageBase64, isSealed }) => {
       try {
         const game = gameManager.getGame(gameId);
-        game.revealEyeLetter(team, letter);
+        game.endEyePower(team, imageBase64, isSealed);
+        io.to(`game:${gameId}`).emit('game_state_update', game);
+      } catch (error) {
+        socket.emit('game_error', error.message);
+      }
+    });
+
+    // --- POUVOIR DE L'OEIL : REVELATION DE LETTRE ---
+    socket.on('reveal_eye_letter', ({ gameId, team, imageBase64 }) => {
+      try {
+        const game = gameManager.getGame(gameId);
+        game.revealEyeLetter(team, imageBase64); // Sauvegarde l'image
         io.to(`game:${gameId}`).emit('game_state_update', game);
       } catch (error) {
         socket.emit('game_error', error.message);

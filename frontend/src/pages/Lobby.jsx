@@ -151,7 +151,7 @@ function Lobby() {
                 {/* --- LE MAGNIFIQUE TITRE --- */}
                 <div className="game-logo-banner">
                     <span className="logo-spark">✦</span>
-                    <h1 className="game-main-title">PHANTOM INK</h1>
+                    <h1 className="game-main-title">SPIRIT LINK</h1>
                     <span className="logo-spark">✦</span>
                 </div>
 

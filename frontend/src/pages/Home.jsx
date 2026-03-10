@@ -61,9 +61,9 @@ function Home() {
         <div className="ghost-card" style={{ maxWidth: '450px' }}>
 
             <div className="text-center" style={{ marginBottom: '2rem' }}>
-                <h1 className="ghost-title" style={{ fontSize: '3rem', margin: 0 }}>Phantom Ink</h1>
+                <h1 className="ghost-title" style={{ fontSize: '3rem', margin: 0 }}>Spirit Link</h1>
                 <p className="ghost-subtitle" style={{ letterSpacing: '0.3em', marginTop: '0.5rem' }}>
-                    Inspiré du jeu de société
+                    Connectez-vous à votre esprit avant l'équipe adverse et devinez l'Objet Secret.
                 </p>
             </div>
 
