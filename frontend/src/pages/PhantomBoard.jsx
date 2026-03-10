@@ -5,7 +5,7 @@ import { useUser } from '../hooks/useUser';
 import { TeamSelectionScreen } from './TeamSelectionScreen';
 import GameBoard from './GameBoard.jsx';
 
-function PhantomInkBoard() {
+function SpiritLinkBoard() {
     const { gameId } = useParams();
     const userId = useUser();
     const navigate = useNavigate();
@@ -57,4 +57,4 @@ function PhantomInkBoard() {
     return <GameBoard game={gameState} socket={socketRef.current} />;
 }
 
-export default PhantomInkBoard;
+export default SpiritLinkBoard;

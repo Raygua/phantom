@@ -1,25 +1,27 @@
 /* src/pages/GameOverScreen.css */
 
-/* On recrée la base du conteneur pour l'écran de fin */
+/* --- CONTENEUR PRINCIPAL --- */
+/* La barre de scroll est maintenant sur le bord du navigateur */
 .game-container.scrollable-container {
     display: flex;
     flex-direction: column;
     width: 100%;
-    max-width: 1600px;
+    max-width: none; 
+    margin: 0; 
     height: 100vh;
-    height: 100dvh;
-    margin: 0 auto;
-    padding: 20px 10px;
+    height: 100dvh; /* Adapté pour Safari iOS */
+    padding: 40px 10px; 
     box-sizing: border-box;
-    overflow-y: auto; /* Autorise le scroll si ça déborde */
-    align-items: center; /* Centre le contenu horizontalement */
-    justify-content: flex-start; /* Commence en haut pour permettre le scroll vers le bas */
+    overflow-y: auto; 
+    overflow-x: hidden;
+    align-items: center; 
+    justify-content: flex-start; 
 }
 
-/* --- ÉCRAN DE VICTOIRE (Base) --- */
+/* --- ÉCRAN DE VICTOIRE (Le Bloc Central) --- */
 .expanded-wrapper {
     width: 100%;
-    max-width: 1200px; /* Plus large pour accueillir les deux colonnes */
+    max-width: 1200px; /* C'est lui qui limite la largeur visuelle */
     background: rgba(15, 23, 42, 0.95);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 24px;
@@ -27,7 +29,7 @@
     text-align: center;
     box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8);
     animation: dropIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
-    margin-bottom: 40px; /* Espace en bas pour le scroll */
+    margin-bottom: 40px; 
 }
 
 @keyframes dropIn {
@@ -35,16 +37,23 @@
     100% { transform: scale(1) translateY(0); opacity: 1; }
 }
 
+/* --- EN-TÊTE --- */
 .victory-header {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 15px;
     margin-bottom: 30px;
+    padding: 30px;
+    border-radius: 16px;
+    transition: all 0.3s ease;
 }
 
 .victory-header.sun-win { color: #fcd34d; text-shadow: 0 0 20px rgba(252, 211, 77, 0.5); }
 .victory-header.moon-win { color: #a78bfa; text-shadow: 0 0 20px rgba(167, 139, 250, 0.5); }
+.victory-header.draw-game { /* NOUVEAU : Style pour l'égalité */
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
 
 .trophy-icon { animation: floatTrophy 3s ease-in-out infinite; }
 
@@ -58,8 +67,10 @@
     font-size: 2.5rem;
     letter-spacing: 8px;
     margin: 0;
+    text-align: center;
 }
 
+/* --- MOT SECRET --- */
 .secret-reveal-box {
     margin: 30px 0;
     padding: 30px;
@@ -80,7 +91,7 @@
     word-break: break-word;
 }
 
-/* --- LE DEBRIEFING (Version Cartes) --- */
+/* --- LE DEBRIEFING (Les deux colonnes) --- */
 .debriefing-section {
     width: 100%;
     margin-top: 50px;
@@ -153,27 +164,25 @@
 .debrief-timeline-item {
     display: flex;
     align-items: center;
-    gap: 30px; /* Un peu plus d'espace pour respirer */
+    gap: 30px; 
     background: rgba(255, 255, 255, 0.02);
     padding: 20px;
     border-radius: 16px;
     transition: background 0.2s;
+    min-height: 100px; /* S'assure que les images dessinées ont la place d'exister */
 }
 
 .debrief-timeline-item:hover {
     background: rgba(255, 255, 255, 0.05);
 }
 
-/* On réduit la taille de la carte pour qu'elle s'intègre bien */
 .debrief-card-wrapper {
     flex-shrink: 0;
     display: flex;
     justify-content: center;
     align-items: center;
-    /* On laisse la carte imposer sa propre taille */
 }
 
-/* Le résultat écrit par l'Esprit ou le résultat du Guess */
 .debrief-result {
     flex: 1;
     display: flex;
@@ -182,36 +191,21 @@
     text-align: left;
 }
 
+/* Zone d'affichage des dessins de l'esprit */
 .debrief-answer {
-    font-family: monospace;
-    color: var(--primary);
-    letter-spacing: 4px;
-    font-size: 1.5rem;
-    text-transform: uppercase;
-}
-
-/* Statuts spécifiques pour les devinettes */
-.success-text {
-    color: #10b981; /* Vert */
-    font-weight: bold;
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 1.1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 100%;
 }
 
-.error-text {
-    color: #ef4444; /* Rouge */
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 1.1rem;
-}
-
-/* 📱 Responsive Mobile */
+/* --- RESPONSIVE MOBILE 📱 --- */
 @media (max-width: 900px) {
-    .debriefing-grid { grid-template-columns: 1fr; }
+    .debriefing-grid { 
+        grid-template-columns: 1fr; 
+    }
     
     .giant-secret-word {
         font-size: 2.5rem;
@@ -224,53 +218,19 @@
 
     .debrief-timeline-item {
         flex-direction: column;
-        align-items: center; /* On centre la carte sur mobile */
+        align-items: center; 
         text-align: center;
         gap: 15px;
+        padding: 15px;
     }
     
     .debrief-result {
-        padding-left: 0;
-        margin-top: 5px;
-        align-items: center; /* Centre le texte sur mobile */
+        width: 100%;
+        align-items: center; 
     }
     
-    .debrief-card-wrapper {
-        transform: scale(1);
-        transform-origin: top left;
-        margin-bottom: -15px; /* Compense le vide laissé par le scale */
+    .victory-title {
+        font-size: 1.8rem;
+        letter-spacing: 4px;
     }
-}
-
-/* Remplace ton ancien .game-container.scrollable-container par celui-ci */
-
-.game-container.scrollable-container {
-    display: flex;
-    flex-direction: column;
-    
-    /* 🌟 LE SECRET EST ICI : On annule la limite de largeur pour coller aux bords */
-    width: 100%;
-    max-width: none; 
-    margin: 0; 
-    
-    height: 100vh;
-    height: 100dvh; /* Pour mobile */
-    padding: 40px 10px; /* Un peu de marge en haut/bas pour respirer */
-    box-sizing: border-box;
-    
-    /* La barre de scroll sera maintenant sur le bord du navigateur ! */
-    overflow-y: auto; 
-    overflow-x: hidden;
-    
-    /* On centre le contenu intérieur (ton wrapper) */
-    align-items: center; 
-    justify-content: flex-start; 
-}
-
-/* On s'assure que ton wrapper garde sa belle largeur centrée */
-.expanded-wrapper {
-    width: 100%;
-    max-width: 1200px; /* C'est lui qui limite la largeur visuelle */
-    /* ... le reste de tes styles (background, border, etc.) ne bouge pas ... */
-    margin-bottom: 40px; /* Assure un peu d'espace sous le bloc en fin de scroll */
 }

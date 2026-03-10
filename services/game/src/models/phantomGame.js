@@ -62,7 +62,8 @@ class PhantomGame {
       pendingQuestions: [], // Les 2 cartes proposées à l'Esprit
       selectedQuestion: null,
       currentWritingClue: "", // L'indice en cours d'écriture
-      currentGuessingWord: "" // Le mot en cours de devinette
+      currentGuessingWord: "", // Le mot en cours de devinette
+      currentLiveImage: null
     };
   }
 
@@ -215,63 +216,84 @@ class PhantomGame {
 
   selectQuestion(team, selectedCardId) {
     const teamKey = team.toLowerCase();
-    // L'Esprit a choisi une carte
     const selected = this.turnState.pendingQuestions.find(c => c.id === selectedCardId);
     const discarded = this.turnState.pendingQuestions.find(c => c.id !== selectedCardId);
 
     if (!selected) throw new Error("Carte invalide.");
-
-    // La carte non choisie part dans la défausse
     if (discarded) this.discardPile.push(discarded);
 
-    // On prépare l'indice
     this.turnState.selectedQuestion = selected.text;
-    this.turnState.currentWritingClue = "";
-
+    
     this.teams[teamKey].clues.push({
       questionId: selected.text,
-      text: "",
-      isComplete: false
+      letters: [], // 🌟 NOUVEAU : Un tableau pour stocker les images des lettres
+      isSealed: false, // 🌟 NOUVEAU : True uniquement si l'esprit met un "."
+      isGuess: false
     });
 
-    // Le Médium a joué 2 cartes, on l'autorise à en repiocher 2 pour revenir à 7
     this.drawCards(teamKey, 2);
   }
 
-  writeWord(team, text) {
+  commitLetter(team, imageBase64) {
+    // CAS 1 : On est dans le Pouvoir de l'Oeil (Étape 1)
+    if (this.turnState.action === TURN_STATE.EYE_POWER_REVEAL) {
+        const target = this.turnState.eyeTarget;
+        if (team.toLowerCase() !== target.team && team !== 'BOTH') throw new Error("Non autorisé.");
+        
+        const targetClue = this.teams[target.team].clues[target.index];
+        targetClue.letters.push({ image: imageBase64, isRevealed: true }); // On sauvegarde la lettre réparée
+        
+        this.turnState.currentLiveImage = null;
+        
+        if (target.step === 1) {
+            // On passe à l'étape 2 : La nouvelle lettre !
+            target.step = 2;
+            target.initialImage = null; 
+        }
+        return;
+    }
+
+    // CAS 2 : C'est le tour normal de l'Esprit
     const teamKey = team.toLowerCase();
+    this.verifyTurn(teamKey); 
     const activeClue = this.teams[teamKey].clues[this.teams[teamKey].clues.length - 1];
+    
+    if (!activeClue || activeClue.isSealed) throw new Error("Cet indice est déjà terminé.");
 
-    // On remplace totalement le texte par le nouveau (permet d'effacer !)
-    activeClue.text = text;
-    this.turnState.currentWritingClue = text;
+    activeClue.letters.push({ image: imageBase64, isRevealed: true });
+    this.turnState.currentLiveImage = null;
+  }
+  
+  finishWord(team) {
+    const teamKey = team.toLowerCase();
+    this.verifyTurn(teamKey);
+    const activeClue = this.teams[teamKey].clues[this.teams[teamKey].clues.length - 1];
+    
+    if (!activeClue || activeClue.isSealed) throw new Error("Cet indice est déjà terminé.");
 
-    return activeClue.text;
+    activeClue.isSealed = true; // Le mot est verrouillé, l'Oeil ne pourra plus agir dessus
+    this.endTurn();
   }
 
   silencio(team) {
     const teamKey = team.toLowerCase();
-    // Le Médium arrête l'Esprit
+    this.verifyTurn(teamKey);
     const activeClue = this.teams[teamKey].clues[this.teams[teamKey].clues.length - 1];
+    
+    // 🌟 Si l'Esprit était en train de dessiner, on capture son dessin inachevé !
+    if (this.turnState.currentLiveImage) {
+        activeClue.letters.push({
+            image: this.turnState.currentLiveImage,
+            isRevealed: true
+        });
+        this.turnState.currentLiveImage = null;
+    }
+
     activeClue.isComplete = true;
     this.endTurn();
   }
 
   // --- ACTION : DEVINER L'OBJET ---
-  startGuessing(team) {
-    const teamKey = team.toLowerCase();
-    this.verifyTurn(teamKey);
-    this.turnState.action = TURN_STATE.GUESS_OBJECT;
-    this.turnState.currentGuessingWord = "";
-    
-    // RÈGLE 2 : La tentative consomme un tour et s'affiche sur le bloc
-    this.teams[teamKey].clues.push({
-        questionId: "TENTATIVE",
-        text: "",
-        isComplete: false,
-        isGuess: true
-    });
-  }
 
   guessLetter(team, letter) {
     const teamKey = team.toLowerCase();
@@ -327,17 +349,10 @@ class PhantomGame {
         return;
     }
 
-    // 1. On change d'équipe pour le nouveau tour
     this.currentTurn = this.currentTurn === TEAMS.SUN ? TEAMS.MOON : TEAMS.SUN;
     const newTeamKey = this.currentTurn.toLowerCase();
-    
-    // 2. On regarde combien de tours la NOUVELLE équipe a déjà joué.
-    // S'ils en ont joué 2, ils vont commencer leur 3ème tour (index 2 dans un tableau 0-based)
-    // Mais visuellement sur le carnet, c'est la ligne N°3 (index 2) ou N°4 (index 3) ?
-    // En fait, `turnsTaken` = 0 signifie "On va remplir la ligne 1" (index 0).
     const currentTurnIndex = this.teams[newTeamKey].turnsTaken; 
     
-    // Sur le plateau : Soleil = Lignes 4, 6, 7 (Index 3, 5, 6) | Lune = Lignes 3, 5, 6 (Index 2, 4, 5)
     const sunEyes = [3, 5, 6];
     const moonEyes = [2, 4, 5];
     
@@ -345,15 +360,15 @@ class PhantomGame {
                        (newTeamKey === 'moon' && moonEyes.includes(currentTurnIndex));
 
     const allClues = [...this.teams.sun.clues, ...this.teams.moon.clues];
-    const hasValidTarget = allClues.some(clue => !clue.isGuess && !clue.text.endsWith('.'));
+    // 🌟 CORRECTION : Une cible valide est un mot qui n'est pas une tentative et qui n'a pas été scellé par un "."
+    const hasValidTarget = allClues.some(clue => !clue.isGuess && !clue.isSealed);
 
     this.turnState = {
       action: (isEyeSpace && hasValidTarget) ? TURN_STATE.EYE_POWER_SELECTION : null,
       pendingQuestions: [],
       selectedQuestion: null,
-      currentWritingClue: "",
-      currentGuessingWord: "",
-      eyeTarget: null
+      eyeTarget: null,
+      currentLiveImage: null
     };
   }
 
@@ -374,24 +389,48 @@ class PhantomGame {
     
     const targetClue = this.teams[targetTeam].clues[targetIndex];
     
-    // 🌟 CORRECTION 1 : On bloque la sélection si l'indice se termine par un point
-    if (!targetClue || targetClue.isGuess || targetClue.text.endsWith('.')) {
+    if (!targetClue || targetClue.isGuess || targetClue.isSealed) {
         throw new Error("Indice invalide ou déjà scellé par un point.");
     }
+
+    // On "aspire" la toute dernière lettre (qui est potentiellement incomplète)
+    const lastLetter = targetClue.letters.pop();
 
     this.turnState.action = TURN_STATE.EYE_POWER_REVEAL;
     this.turnState.eyeTarget = { 
         team: targetTeam, 
         index: targetIndex, 
-        questionId: targetClue.questionId, 
-        currentText: targetClue.text 
+        questionId: targetClue.questionId,
+        initialImage: lastLetter ? lastLetter.image : null, // L'image à redessiner
+        step: 1 // 🌟 ÉTAPE 1 : Compléter la lettre
     };
   }
 
-  revealEyeLetter(team, letter) {
+  endEyePower(team, imageBase64, isSealed) {
+    if (this.turnState.action !== TURN_STATE.EYE_POWER_REVEAL) throw new Error("Action invalide.");
+    const target = this.turnState.eyeTarget;
+    if (team.toLowerCase() !== target.team && team !== 'BOTH') throw new Error("Non autorisé.");
+
+    const targetClue = this.teams[target.team].clues[target.index];
+    
+    // S'il a dessiné une nouvelle lettre, on l'ajoute
+    if (imageBase64) {
+        targetClue.letters.push({ image: imageBase64, isRevealed: true });
+    }
+    // S'il a mis un point, on verrouille le mot
+    if (isSealed) {
+        targetClue.isSealed = true;
+    }
+
+    // On nettoie et on clôture la phase
+    this.turnState.action = null;
+    this.turnState.eyeTarget = null;
+    this.turnState.currentLiveImage = null;
+  }
+
+  revealEyeLetter(team, imageBase64) {
     const targetTeam = this.turnState.eyeTarget.team;
     
-    // Seul l'Esprit qui a écrit l'indice peut révéler la lettre (ou l'Esprit partagé "BOTH")
     if (team.toLowerCase() !== targetTeam && team !== 'BOTH') {
         throw new Error("Seul l'Esprit qui a écrit cet indice peut révéler une lettre.");
     }
@@ -399,9 +438,9 @@ class PhantomGame {
     if (this.turnState.action !== TURN_STATE.EYE_POWER_REVEAL) throw new Error("Action invalide.");
 
     const targetClue = this.teams[targetTeam].clues[this.turnState.eyeTarget.index];
-    targetClue.text += letter.toUpperCase();
+    // On ajoute la lettre dessinée à la suite du mot ciblé
+    targetClue.letters.push({ image: imageBase64, isRevealed: true });
     
-    // L'Oeil est résolu, on passe à l'action normale du tour
     this.turnState.action = null;
     this.turnState.eyeTarget = null;
   }
@@ -419,6 +458,70 @@ class PhantomGame {
 
     // 3. On repioche 7 cartes !
     this.drawCards(teamKey, 7);
+  }
+
+    syncLiveImage(team, imageBase64) {
+    if (this.turnState.action === TURN_STATE.EYE_POWER_REVEAL) {
+        if (team.toLowerCase() === this.turnState.eyeTarget.team || team === 'BOTH') {
+            this.turnState.currentLiveImage = imageBase64;
+        }
+    } else if (this.currentTurn.toLowerCase() === team.toLowerCase()) {
+        this.turnState.currentLiveImage = imageBase64;
+    }
+  }
+
+  startGuessing(team) {
+    const teamKey = team.toLowerCase();
+    this.verifyTurn(teamKey);
+    this.turnState.action = TURN_STATE.GUESS_OBJECT;
+    
+    this.teams[teamKey].clues.push({
+        questionId: "TENTATIVE",
+        letters: [], // On stockera les Base64 ici aussi
+        isComplete: false,
+        isGuess: true,
+        wrongGuess: false
+    });
+  }
+
+  // 🌟 NOUVEAU : Le Médium envoie une lettre, on attend le juge
+  submitGuessLetter(team, imageBase64, isDot) {
+    this.verifyTurn(team);
+    this.turnState.action = 'JUDGE_GUESS';
+    this.turnState.pendingGuessLetter = { imageBase64, isDot };
+    this.turnState.currentLiveImage = null; // Nettoie le live pad
+  }
+
+  // 🌟 NOUVEAU : L'Esprit juge la lettre !
+  judgeGuessLetter(team, isCorrect) {
+    const teamKey = team.toLowerCase();
+    const activeClue = this.teams[teamKey].clues[this.teams[teamKey].clues.length - 1];
+    const pending = this.turnState.pendingGuessLetter;
+
+    if (isCorrect) {
+        if (pending.isDot) {
+            // Victoire !
+            activeClue.isSealed = true;
+            this.status = GAME_STATE.FINISHED;
+            this.winner = team;
+        } else {
+            // Lettre validée, le Médium peut dessiner la suivante
+            activeClue.letters.push({ image: pending.imageBase64, isRevealed: true, isWrong: false });
+            this.turnState.action = TURN_STATE.GUESS_OBJECT;
+            this.turnState.pendingGuessLetter = null;
+        }
+    } else {
+        // Mauvaise lettre (Chuut !) -> Silencio forcé
+        if (pending.imageBase64) {
+            activeClue.letters.push({ image: pending.imageBase64, isRevealed: true, isWrong: true });
+        }
+        activeClue.isComplete = true;
+        activeClue.wrongGuess = true;
+        
+        this.turnState.action = null;
+        this.turnState.pendingGuessLetter = null;
+        this.endTurn();
+    }
   }
 
   verifyTurn(team) {

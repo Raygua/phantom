@@ -87,7 +87,7 @@ export const initLobbySocket = (io) => {
       settings.status = 'PLAYING';
       await redis.set(`${lobbyKey}:settings`, JSON.stringify(settings), { EX: 86400 });
     }
-    io.to(lobbyId).emit('game_starting', { gameType: 'phantom-ink' });
+    io.to(lobbyId).emit('game_starting', { gameType: 'spirit-link' });
   };
 
   io.on('connection', async (socket) => {
@@ -121,7 +121,7 @@ export const initLobbySocket = (io) => {
         if (existingPlayerRaw) {
           console.log(`[Lobby] Reconnection ${userId} to the game, automatically redirecting to the game`);
           return socket.emit('game_starting', {
-            gameType: 'phantom-ink',
+            gameType: 'spirit-link',
           });
         } else {
           return socket.emit('error_join', 'This lobby has already started');
