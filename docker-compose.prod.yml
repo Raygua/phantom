@@ -1,0 +1,65 @@
+services:
+  redis-game:
+    image: redis:alpine
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+  reverse-proxy:
+    build:
+      context: ./reverse-proxy
+      dockerfile: Dockerfile.dev 
+    ports:
+      - "127.0.0.1:8181:80"
+    depends_on:
+      - frontend-game
+      - game
+      - lobby
+      - swagger-ui
+    restart: unless-stopped
+    networks:
+      - frontend-net
+      - backend-net
+
+  game:
+    build:
+      context: ./services/game
+      dockerfile: Dockerfile.dev  
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+  frontend-game:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev 
+    restart: unless-stopped
+    networks:
+      - frontend-net
+  
+  lobby:
+    build:
+      context: ./services/lobby
+      dockerfile: Dockerfile.dev
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+networks:
+  frontend-net:
+  backend-net: 
+
+volumes:
+  redis_data:
