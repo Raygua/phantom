@@ -143,7 +143,7 @@ export function LiveDrawingPad({ socket, gameId, team, canDraw, initialImage, pa
                     <canvas
                         ref={canvasRef}
                         width={140}
-                        height={240}
+                        height={200}
                         style={{
                             background: 'rgba(255, 255, 255, 0.05)',
                             border: '2px dashed var(--primary)',

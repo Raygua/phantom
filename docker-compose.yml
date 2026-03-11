@@ -18,7 +18,6 @@ services:
     environment:
       URLS: >-
         [ 
-          { "url": 'http://localhost:8080/api/card/api-docs.json', "name": 'Card Service' },
           { "url": 'http://localhost:8080/api/game/api-docs.json', "name": 'Game Service' }, 
           { "url": 'http://localhost:8080/api/lobby/api-docs.json', "name": 'Lobby Service' } 
         ]
@@ -32,25 +31,11 @@ services:
     ports:
       - "8080:80"
     depends_on:
-      - frontend
+      - frontend-game
       - game
       - lobby
-      - card
     volumes:
       - ./reverse-proxy/logs:/var/log/nginx
-
-  card:
-    build:
-      context: ./services/card
-      dockerfile: Dockerfile.dev
-    container_name: card-service
-    volumes:
-      - ./services/card/src:/app/src
-      - /app/node_modules
-    env_file:
-      - .env
-    depends_on:
-      - redis
 
   game:
     build:
@@ -63,7 +48,6 @@ services:
     env_file:
       - .env
     depends_on:
-      - card
       - redis
 
   lobby:
@@ -80,11 +64,11 @@ services:
       - game
       - redis
 
-  frontend:
+  frontend-game:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
-    container_name: frontend
+    container_name: frontend-game
     ports:
       - "5173:80"
     volumes:

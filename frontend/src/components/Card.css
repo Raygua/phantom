@@ -29,7 +29,7 @@
 
 /* --- 1. SURVOL CLASSIQUE --- */
 .phantom-card-container:hover {
-    --hover-shift-y: -25px;
+    --hover-shift-y: -15px;
     z-index: 10;
 }
 .phantom-card-container:hover ~ .phantom-card-container {
@@ -38,7 +38,7 @@
 
 /* --- 2. SÉLECTION --- */
 .phantom-card-container.selected {
-    --hover-shift-y: -30px;
+    --hover-shift-y: -15px;
     z-index: 100;
 }
 .phantom-card-container.selected .phantom-card-face {
@@ -58,7 +58,7 @@
 
 /* --- 3. SÉCURITÉ : SURVOL D'UNE CARTE SÉLECTIONNÉE --- */
 .phantom-card-container.selected:hover {
-    --hover-shift-y: -30px; 
+    --hover-shift-y: -15px; 
     z-index: 100; 
 }
 .phantom-card-container.selected:hover ~ .phantom-card-container {

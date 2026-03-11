@@ -161,7 +161,7 @@ export const initPhantomSocket = (io) => {
     socket.on('send_draw_stroke', (data) => {
       // data contient : { gameId, team, x0, y0, x1, y1 }
       // On transfère immédiatement le trait aux autres joueurs du salon SANS le sauvegarder en BDD (trop lourd)
-      socket.to(`game:${data.gameId}`).emit('receive_draw_stroke', data);
+      io.to(`game:${data.gameId}`).emit('receive_draw_stroke', data);
     });
 
     // --- L'ESPRIT EFFACE SON CADRE ---

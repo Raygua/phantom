@@ -4,24 +4,61 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    max-width: 1600px;
+    max-width: none;
     height: 100vh;
-    /* Prend toute la hauteur de l'écran */
+    height: 100dvh;
     margin: 0 auto;
-    padding: 15px;
+    /* On enlève le padding ici pour le mettre dans les zones enfants */
+    padding: 0; 
     box-sizing: border-box;
-    overflow: hidden;
-    /* Empêche le scroll de la page entière */
+    /* On empêche le scroll sur TOUTE la page, on va le mettre uniquement au milieu */
+    overflow: hidden; 
+}
+
+.game-top-section-wrapper {
+    flex: 1; /* Prend tout l'espace disponible */
+    min-height: 0; /* Autorise le scroll intérieur */
+    overflow-y: auto; /* Autorise le scroll vertical ici si besoin */
+    overflow-x: hidden;
+    padding: 30px 15px; /* On augmente un peu le padding vertical pour respirer */
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centre horizontalement (comme avant) */
+
+    /* 🌟 NOUVEAU : Centre VERTICALEMENT le plateau au milieu de l'espace disponible */
     justify-content: center;
+    
+    box-sizing: border-box;
+}
+
+.game-top-section-wrapper::-webkit-scrollbar {
+    width: 8px;
+}
+.game-top-section-wrapper::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+}
+.game-top-section-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+.game-top-section-wrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
 }
 
 /* --- HAUT : LE JEU (3 Colonnes) --- */
 .game-top-section {
     display: grid;
-    /* 🌟 On rend les colonnes latérales flexibles (minmax) pour qu'elles puissent rétrécir un peu si besoin */
     grid-template-columns: minmax(130px, 250px) 1fr minmax(130px, 250px);
     gap: 20px;
-    min-height: 0;
+    
+    /* 🌟 NOUVEAU : On limite la taille du plateau pour qu'il ne s'étire pas à l'infini */
+    width: 100%;
+    max-width: 2000px; 
+    
+    /* 🌟 NOUVEAU : On le centre au milieu de l'écran */
+    margin: 0 auto; 
+    justify-content: center;
 }
 
 /* --- LE CARNET CENTRAL --- */
@@ -155,9 +192,18 @@
 
 /* --- BAS : LA MAIN DU JOUEUR --- */
 .game-bottom-section {
+    flex-shrink: 0; /* 🌟 Empêche cette section d'être écrasée si l'écran est petit */
+    width: 100%;
+    min-height: 300px; /* Une bonne hauteur de base, mais s'adapte si besoin */
+    padding: 20px 15px;
+    background: #0f1115; /* Fond sombre pour la séparer du carnet qui scrolle en dessous */
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.5); /* Petite ombre vers le haut */
     display: flex;
     justify-content: center;
-    margin-top: 20px;
+    align-items: center;
+    z-index: 200; /* Toujours au-dessus du reste */
+    box-sizing: border-box;
 }
 
 .bottom-hand-wrapper {
@@ -169,7 +215,7 @@
 
 .player-hand-cards {
     display: flex;
-    padding: 30px 10px 0 10px;
+    padding: 0px 10px 0 10px;
     align-items: flex-end;
 }
 
@@ -394,8 +440,6 @@
     }
 
     .game-bottom-section {
-        position: sticky;
-        bottom: 0;
         padding-top: 20px;
         background: #0f1115;
         z-index: 100;
@@ -460,15 +504,17 @@
 
     /* 2. On fixe la section du bas */
     .game-bottom-section {
-        flex-shrink: 0; /* Empêche cette section de rétrécir */
+        flex-shrink: 0; 
         width: 100%;
         background: #0f1115;
         z-index: 100;
         border-top: 1px solid #333;
         padding-top: 10px;
         padding-bottom: 10px;
-        margin-top:0px;
-        /* Plus besoin de position: sticky car le parent ne scrolle pas */
+        margin-top: 0px;
+        /* 🌟 Sur mobile, on repasse en auto car on a besoin de plus de place verticale */
+        height: auto; 
+        min-height: auto;
     }
 }
 
@@ -518,13 +564,14 @@
     background: rgba(15, 23, 42, 0.95);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
-    padding: 0px 40px 10px 40px;
+    padding: 20px 40px;
     display: flex;
     flex-direction: column;
     align-items: center;
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(10px);
-    animation: slideUp 0.3s ease-out;
+    /* 🌟 On le limite pour qu'il ne déborde pas */
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .bottom-action-panel.active-turn {

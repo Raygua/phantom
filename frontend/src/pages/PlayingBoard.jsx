@@ -4,7 +4,7 @@ import { Send, Hand, HelpCircle, Eye as EyeIcon, Sun, Moon, RefreshCcw, Check } 
 import Card from '../components/Card';
 import CarnetBoard from '../components/CarnetBoard';
 import PlayerHand from '../components/PlayerHand';
-import { LiveDrawingPad } from '../components/ui/LiveDrawingPad'; // 🌟 IMPORT DU NOUVEAU COMPOSANT
+import { LiveDrawingPad } from '../components/ui/LiveDrawingPad';
 
 const PlayingBoard = ({ game, socket, myProfile }) => {
     const isMedium = myProfile.role === 'MEDIUM';
@@ -15,16 +15,15 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
     const isMyTurn = game.currentTurn === activeTeam;
     const teamData = game.teams[activeTeam.toLowerCase()];
 
-    // 🌟 liveClue n'est plus utilisé pour le texte, mais on le garde pour l'architecture générale
-    const [liveClue, setLiveClue] = useState("");
     const [guessInput, setGuessInput] = useState("");
     const [showMulliganModal, setShowMulliganModal] = useState(false);
     const [selections, setSelections] = useState([]);
+    const [historyModal, setHistoryModal] = useState(null);
+
+    // 🌟 NOUVEAU : État pour capter l'image en temps réel (pour le CarnetBoard)
+    const [liveImage, setLiveImage] = useState(null);
 
     const uniqueSelectedCardIds = [...new Set(selections.map(s => s.cardId))];
-
-    // État pour ouvrir la modale d'historique ('SUN', 'MOON', ou null)
-    const [historyModal, setHistoryModal] = useState(null);
 
     // --- ACTIONS ---
     const handleProposeQuestions = () => {
@@ -36,11 +35,7 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
             cardId2: uniqueSelectedCardIds[1]
         });
         setSelections([]);
-        socket.emit('update_selections', {
-            gameId: game.gameId,
-            team: activeTeam,
-            remoteSelections: []
-        });
+        socket.emit('update_selections', { gameId: game.gameId, team: activeTeam, remoteSelections: [] });
     };
 
     const handleSelectQuestion = () => {
@@ -51,51 +46,13 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
             qId: uniqueSelectedCardIds[0]
         });
         setSelections([]);
-        socket.emit('update_selections', {
-            gameId: game.gameId,
-            team: activeTeam,
-            remoteSelections: []
-        });
+        socket.emit('update_selections', { gameId: game.gameId, team: activeTeam, remoteSelections: [] });
     }
-
-    const handleGuess = (e) => {
-        e.preventDefault();
-        if (!guessInput.trim() || guessInput.length > 1) return;
-        socket.emit('guess_letter', {
-            gameId: game.gameId,
-            team: activeTeam,
-            letter: guessInput.trim().charAt(0)
-        });
-        setGuessInput("");
-        socket.emit('typing_guess_input', {
-            gameId: game.gameId,
-            team: activeTeam,
-            letter: ""
-        });
-    };
-
-    useEffect(() => {
-        const handleGuessTyping = ({ team, letter }) => {
-            if (team === activeTeam) setGuessInput(letter);
-        };
-        socket.on('guess_input_updated', handleGuessTyping);
-        return () => socket.off('guess_input_updated', handleGuessTyping);
-    }, [socket, activeTeam]);
-
-    const handleGuessChange = (val) => {
-        setGuessInput(val);
-        socket.emit('typing_guess_input', {
-            gameId: game.gameId,
-            team: activeTeam,
-            letter: val
-        });
-    };
 
     const handleEyeClick = (targetTeam, targetIndex) => {
         socket.emit('use_eye_power', { gameId: game.gameId, team: activeTeam, targetTeam, targetIndex });
     };
 
-    // 🌟 NOUVEAU : Méthode appelée quand l'esprit clique sur "."
     const handleEndWord = () => {
         socket.emit('end_word', { gameId: game.gameId, team: activeTeam });
     };
@@ -113,6 +70,29 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
         socket.on('selections_synced', handleSelectionSync);
         return () => socket.off('selections_synced', handleSelectionSync);
     }, [socket, activeTeam]);
+
+    // 🌟 NOUVEAU : Écouteur pour capter le dessin en cours (si on ne dessine pas)
+    useEffect(() => {
+        const handleSyncLiveImage = ({ team, imageBase64 }) => {
+            // On affiche l'image live si elle correspond à l'action en cours
+            setLiveImage(imageBase64);
+        };
+        
+        const handleClearPad = () => {
+            setLiveImage(null);
+        };
+
+        socket.on('sync_live_image', handleSyncLiveImage);
+        socket.on('clear_live_pad', handleClearPad);
+        
+        // On nettoie quand le tour change
+        setLiveImage(null);
+
+        return () => {
+            socket.off('sync_live_image', handleSyncLiveImage);
+            socket.off('clear_live_pad', handleClearPad);
+        };
+    }, [socket, turnState.action]);
 
     const toggleCardSelection = (cardId) => {
         if (!isMyTurn) return;
@@ -133,21 +113,12 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
                 const myCardsCount = newSelections.filter(s => s.userId === myId).length;
                 if (myCardsCount >= 2) return;
             }
-
             newSelections.push({
-                cardId: cardId,
-                userId: myId,
-                userName: myProfile.username,
-                color: myProfile.color || 'var(--primary)'
+                cardId: cardId, userId: myId, userName: myProfile.username, color: myProfile.color || 'var(--primary)'
             });
         }
-
         setSelections(newSelections);
-        socket.emit('update_selections', {
-            gameId: game.gameId,
-            team: activeTeam,
-            remoteSelections: newSelections
-        });
+        socket.emit('update_selections', { gameId: game.gameId, team: activeTeam, remoteSelections: newSelections });
     };
 
     // --- LE MENU LATÉRAL DE CHAQUE ÉQUIPE ---
@@ -177,12 +148,8 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
                         return (
                             <div key={p.id} className={`player-item ${isMe ? 'is-me' : ''}`}>
                                 <div className="player-info">
-                                    <span className={`role-badge ${p.role === 'SPIRIT' ? 'ghost-role' : 'medium-role'}`}>
-                                        {roleLabel}
-                                    </span>
-                                    <span className="player-name" style={{ color: p.color }}>
-                                        {p.username} {isMe && "(Vous)"}
-                                    </span>
+                                    <span className={`role-badge ${p.role === 'SPIRIT' ? 'ghost-role' : 'medium-role'}`}>{roleLabel}</span>
+                                    <span className="player-name" style={{ color: p.color }}>{p.username} {isMe && "(Vous)"}</span>
                                 </div>
                             </div>
                         );
@@ -207,6 +174,18 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
     const isEyeRevealPhase = turnState.action === 'EYE_POWER_REVEAL';
     const amITargetSpirit = isEyeRevealPhase && isSpirit && (activeTeam.toLowerCase() === turnState.eyeTarget?.team || myProfile.team === 'BOTH');
 
+    // 🌟 CONDITIONS D'AFFICHAGE DU PAD (Uniquement pour le dessinateur)
+    const showPadForAskQuestion = isMyTurn && isSpirit && turnState.action === 'ASK_QUESTION' && turnState.selectedQuestion;
+    const showPadForGuess = isMyTurn && isMedium && turnState.action === 'GUESS_OBJECT';
+    const showPadForEye = isEyeRevealPhase && amITargetSpirit;
+
+    // Détermine de quel côté le Pad doit s'afficher
+    const getPadAlignment = () => {
+        if (showPadForAskQuestion || showPadForGuess) return activeTeam === 'SUN' ? 'flex-end' : 'flex-start';
+        if (showPadForEye) return turnState.eyeTarget.team.toUpperCase() === 'SUN' ? 'flex-end' : 'flex-start';
+        return 'center';
+    };
+
     return (
         <div className="game-container">
             <div className="game-top-section-wrapper">
@@ -215,16 +194,71 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
                     <h1 className="game-main-title">SPIRIT LINK</h1>
                     <span className="logo-spark">✦</span>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
+                
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", position: 'relative' }}>
+                    
+                    {/* 🌟 NOUVEAU : Le calque absolu pour le Drawing Pad */}
+                    {(showPadForAskQuestion || showPadForGuess || showPadForEye) && (
+                        <div style={{
+                            position: 'absolute',
+                            top: '50px', // Ajuste cette valeur pour le placer bien sur le carnet
+                            left: 0,
+                            right: 0,
+                            display: 'flex',
+                            justifyContent: getPadAlignment(),
+                            padding: '0 50px', // Évite qu'il ne colle complètement aux bords
+                            zIndex: 100,
+                            pointerEvents: 'none' // Permet de cliquer à travers la zone transparente
+                        }}>
+                            <div style={{ pointerEvents: 'auto', background: 'rgba(15, 23, 42, 1)', padding: '20px', borderRadius: '16px', border: '1px solid var(--primary)', boxShadow: '0 20px 40px rgba(0,0,0,0.8)' }}>
+                                
+                                {showPadForAskQuestion && (
+                                    <>
+                                        <p style={{ color: 'var(--primary)', fontSize: '1.1rem', marginBottom: '10px', textAlign: 'center' }}>{turnState.selectedQuestion}</p>
+                                        <LiveDrawingPad socket={socket} gameId={game.gameId} team={game.currentTurn} canDraw={true} padMode="NORMAL" />
+                                    </>
+                                )}
+
+                                {showPadForGuess && (
+                                    <>
+                                        <p style={{ color: 'var(--primary)', fontSize: '1.1rem', marginBottom: '10px', textAlign: 'center' }}>Tentative</p>
+                                        <LiveDrawingPad socket={socket} gameId={game.gameId} team={activeTeam} canDraw={true} padMode="GUESS" />
+                                    </>
+                                )}
+
+                                {showPadForEye && (
+                                    <>
+                                        <p style={{ color: 'var(--primary)', fontSize: '1.1rem', marginBottom: '10px', textAlign: 'center' }}>
+                                            <EyeIcon size={16} style={{ verticalAlign: 'middle' }} /> {turnState.eyeTarget.questionId}
+                                        </p>
+                                        <LiveDrawingPad socket={socket} gameId={game.gameId} team={turnState.eyeTarget.team} canDraw={true} padMode={turnState.eyeTarget.step === 1 ? 'EYE_STEP_1' : 'EYE_STEP_2'} initialImage={turnState.eyeTarget.initialImage} />
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                     <div className="game-top-section" style={{ width: "100%" }}>
                         {renderTeamMenu('SUN', game.teams?.sun)}
-                        {/* 🌟 Le composant CarnetBoard mis à jour gèrera les images Base64 */}
-                        <CarnetBoard game={game} turnState={turnState} isMyTurn={isMyTurn} isMedium={isMedium} activeTeam={activeTeam} onEyeClick={handleEyeClick} />
+                        
+                        {/* 🌟 On passe liveImage au CarnetBoard pour qu'il l'affiche en temps réel */}
+                        <CarnetBoard 
+                            game={game} 
+                            turnState={turnState} 
+                            isMyTurn={isMyTurn} 
+                            isMedium={isMedium} 
+                            activeTeam={activeTeam} 
+                            onEyeClick={handleEyeClick}
+                            liveImage={liveImage} 
+                            socket={socket}
+                        />
+                        
                         {renderTeamMenu('MOON', game.teams?.moon)}
                     </div>
                 </div>
             </div>
 
+            {/* --- ACTIONS DU BAS --- */}
             <div className="game-bottom-section" style={{ flexDirection: 'column', alignItems: 'center' }}>
                 {isSpirit && (
                     <div style={{ color: '#ffffff', fontSize: '1.2rem', fontWeight: 'bold', textShadow: '0 0 10px rgba(255, 255, 255, 0.5)', marginBottom: '15px' }}>
@@ -268,85 +302,50 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
                     </div>
                 )}
 
-                {/* 🌟 ÉTAT 2 : L'Esprit écrit son indice AVEC LE DRAWING PAD */}
-                {isMyTurn && turnState.action === 'ASK_QUESTION' && turnState.selectedQuestion && (
+                {/* ÉTAT 2 : Bouton Silencio pour le Médium (Le pad est en haut) */}
+                {isMyTurn && turnState.action === 'ASK_QUESTION' && turnState.selectedQuestion && isMedium && (
                     <div className="bottom-action-panel active-turn">
-                        <p style={{ color: 'var(--primary)', fontSize: '1.2rem', marginBottom: '15px' }}>
-                            Question : {turnState.selectedQuestion}
-                        </p>
-
-                        {/* 🌟 CORRECTION : On utilise canDraw au lieu de isActiveSpirit */}
-                        <LiveDrawingPad
-                            socket={socket}
-                            gameId={game.gameId}
-                            team={game.currentTurn}
-                            canDraw={isSpirit && isMyTurn}
-                            padMode="NORMAL"
-                        />
-
-                        {isMedium && (
-                            <div style={{ marginTop: '15px' }}>
-                                <p style={{ marginBottom: '10px' }}>Appuyez quand vous avez trouvé l'indice</p>
-                                <button className="ghost-button giant-btn" style={{ background: '#ef4444', color: 'white', borderColor: '#ef4444' }} onClick={() => socket.emit('silencio', { gameId: game.gameId, team: activeTeam })}>
-                                    <Hand size={24} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '10px' }} /> SILENCIO !
-                                </button>
-                            </div>
-                        )}
+                         <p style={{ marginBottom: '10px', fontSize: '1.1rem' }}>L'Esprit rédige l'indice. Appuyez quand vous avez compris.</p>
+                         <button className="ghost-button giant-btn" style={{ background: '#ef4444', color: 'white', borderColor: '#ef4444' }} onClick={() => socket.emit('silencio', { gameId: game.gameId, team: activeTeam })}>
+                             <Hand size={24} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '10px' }} /> SILENCIO !
+                         </button>
                     </div>
                 )}
 
-                {/* ÉTAT 4 : Le Médium dessine sa tentative */}
-                {isMyTurn && turnState.action === 'GUESS_OBJECT' && (
-                    <div className="bottom-action-panel">
-                        <p style={{ color: 'var(--primary)', marginBottom: '15px', fontSize: '1.2rem' }}>
-                            {isMedium ? "Dessinez l'Objet Secret lettre par lettre :" : "Votre Médium tente de deviner l'objet..."}
-                        </p>
-
-                        <LiveDrawingPad
-                            socket={socket}
-                            gameId={game.gameId}
-                            team={activeTeam}
-                            canDraw={isMedium} // C'est le Médium qui dessine ici !
-                            padMode="GUESS"
-                        />
-                    </div>
-                )}
-
-                {/* 🌟 NOUVEL ÉTAT 4b : L'Esprit Juge la lettre proposée */}
+                {/* ÉTAT 4b : L'Esprit Juge la lettre proposée */}
                 {isMyTurn && turnState.action === 'JUDGE_GUESS' && (
                     <div className="bottom-action-panel active-turn">
-                        <p style={{ color: 'var(--primary)', fontSize: '1.2rem', marginBottom: '15px' }}>
+                        <p style={{ color: 'var(--primary)', fontSize: '1.2rem', margin: '0 0 10px 0' }}>
                             {isSpirit ? "Est-ce la bonne lettre ?" : "En attente du jugement de votre Esprit..."}
                         </p>
 
                         {isSpirit && (
-                            <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '20px' }}>
-                                <div style={{ padding: '20px', background: 'rgba(255,255,255,0.05)', border: '2px solid var(--primary)', borderRadius: '12px', marginBottom: '20px' }}>
+                            // 🌟 NOUVEAU : flex-wrap pour que les boutons passent en dessous si pas de place
+                            <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
+                                <div style={{ padding: '15px', background: 'rgba(255,255,255,0.05)', border: '2px solid var(--primary)', borderRadius: '12px' }}>
                                     {turnState.pendingGuessLetter?.isDot ? (
-                                        <span style={{ fontSize: '3rem', fontWeight: 'bold' }}>.</span>
+                                        <span style={{ fontSize: '3rem', fontWeight: 'bold', lineHeight: '1' }}>.</span>
                                     ) : (
-                                        <img src={turnState.pendingGuessLetter?.imageBase64} alt="Tentative" style={{ height: '100px' }} />
+                                        <img src={turnState.pendingGuessLetter?.imageBase64} alt="Tentative" style={{ height: '80px' }} />
                                     )}
                                 </div>
 
-                                {isSpirit && (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', width: '150px' }}>
-                                        <button
-                                            className="ghost-button"
-                                            style={{ background: '#0fad79', color: 'white', borderColor: '#0fad79', padding: '15px 30px' }}
-                                            onClick={() => socket.emit('judge_guess_letter', { gameId: game.gameId, team: activeTeam, isCorrect: true })}
-                                        >
-                                            Tapoter (Correct)
-                                        </button>
-                                        <button
-                                            className="ghost-button"
-                                            style={{ background: '#c43333', color: 'white', borderColor: '#c43333', padding: '15px 30px' }}
-                                            onClick={() => socket.emit('judge_guess_letter', { gameId: game.gameId, team: activeTeam, isCorrect: false })}
-                                        >
-                                            Chuuut ! (Faux)
-                                        </button>
-                                    </div>
-                                )}
+                                <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
+                                    <button
+                                        className="ghost-button"
+                                        style={{ background: '#0fad79', color: 'white', borderColor: '#0fad79', padding: '15px 20px' }}
+                                        onClick={() => socket.emit('judge_guess_letter', { gameId: game.gameId, team: activeTeam, isCorrect: true })}
+                                    >
+                                        Tapoter
+                                    </button>
+                                    <button
+                                        className="ghost-button"
+                                        style={{ background: '#c43333', color: 'white', borderColor: '#c43333', padding: '15px 20px' }}
+                                        onClick={() => socket.emit('judge_guess_letter', { gameId: game.gameId, team: activeTeam, isCorrect: false })}
+                                    >
+                                        Chuuut !
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -360,25 +359,6 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
                         <button className="ghost-button btn-primary" onClick={() => socket.emit('skip_eye_power', { gameId: game.gameId, team: activeTeam })}>
                             Passer ce pouvoir
                         </button>
-                    </div>
-                )}
-
-                {/* 🌟 ÉTAT 6 : L'Esprit ciblé révèle la lettre de l'Oeil */}
-                {isSpirit && isEyeRevealPhase && (
-                    <div className="bottom-action-panel">
-                        <p style={{ color: 'var(--primary)', marginBottom: '15px', fontSize: '1.1rem' }}>
-                            <EyeIcon size={20} style={{ verticalAlign: 'middle' }} /> Révélation sur : <strong>{turnState.eyeTarget.questionId}</strong>
-                        </p>
-
-                        {/* 🌟 CORRECTION : On utilise canDraw au lieu de isActiveSpirit */}
-                        <LiveDrawingPad
-                            socket={socket}
-                            gameId={game.gameId}
-                            team={turnState.eyeTarget.team}
-                            canDraw={amITargetSpirit}
-                            padMode={turnState.eyeTarget.step === 1 ? 'EYE_STEP_1' : 'EYE_STEP_2'}
-                            initialImage={turnState.eyeTarget.initialImage}
-                        />
                     </div>
                 )}
 
@@ -400,7 +380,7 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
                 {isSpirit && !(isMyTurn && turnState.action === 'ASK_QUESTION')
                 && !(isMyTurn && turnState.action === 'JUDGE_GUESS')
                 && !(isMyTurn && turnState.action === 'GUESS_OBJECT')
-                 && !(isMyTurn && isEyeRevealPhase) && (
+                 && !(isEyeRevealPhase) && (
                     <div className="spirit-memory-zone">
                         <PlayerHand
                             hand={teamData.clues
@@ -417,54 +397,36 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
                 )}
             </div>
 
-            {/* 3. MODALE D'HISTORIQUE (Tiroir du bas) */}
-            {
-                historyModal && (
-                    <div className="history-modal-overlay" onClick={() => setHistoryModal(null)}>
-                        <div className="history-drawer">
-                            <h2 style={{ color: historyModal === 'SUN' ? '#fcd34d' : '#a78bfa', marginBottom: '40px', fontFamily: 'var(--font-serif)' }}>
-                                Historique d'indice : {historyModal === 'SUN' ? 'Soleil' : 'Lune'}
-                            </h2>
-                            <div className="history-modal-content">
-                                {game.teams[historyModal.toLowerCase()].clues.filter(c => !c.isGuess).map((clue, i) => {
-                                    const canSee = isSpirit || (isMedium && myProfile.team === historyModal);
-                                    const cardObj = { id: `Tour ${i + 1}`, text: clue.questionId };
-                                    return <Card key={i} card={cardObj} isFaceUp={canSee} />;
-                                })}
-                                {game.teams[historyModal.toLowerCase()].clues.filter(c => !c.isGuess).length === 0 && (
-                                    <p style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Aucun indice n'a encore été posé.</p>
-                                )}
-                            </div>
-                            <p style={{ marginTop: '20px', color: 'var(--text-muted)', fontSize: '0.9rem', cursor: 'pointer', opacity: 0.6 }} onClick={() => setHistoryModal(null)}>
-                                (Cliquez n'importe où pour fermer)
-                            </p>
+            {/* --- MODALES --- */}
+            {historyModal && (
+                <div className="history-modal-overlay" onClick={() => setHistoryModal(null)}>
+                    <div className="history-drawer">
+                        <h2 style={{ color: historyModal === 'SUN' ? '#fcd34d' : '#a78bfa', marginBottom: '40px', fontFamily: 'var(--font-serif)' }}>
+                            Historique d'indice : {historyModal === 'SUN' ? 'Soleil' : 'Lune'}
+                        </h2>
+                        <div className="history-modal-content">
+                            {game.teams[historyModal.toLowerCase()].clues.filter(c => !c.isGuess).map((clue, i) => {
+                                const canSee = isSpirit || (isMedium && myProfile.team === historyModal);
+                                const cardObj = { id: `Tour ${i + 1}`, text: clue.questionId };
+                                return <Card key={i} card={cardObj} isFaceUp={canSee} />;
+                            })}
                         </div>
                     </div>
-                )
-            }
+                </div>
+            )}
 
-            {/* 4. MODALE MULLIGAN */}
-            {
-                showMulliganModal && (
-                    <div className="centered-modal-overlay" onClick={() => setShowMulliganModal(false)}>
-                        <div className="custom-confirm-modal" onClick={e => e.stopPropagation()}>
-                            <h3 style={{ color: '#f59e0b', marginBottom: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontSize: '1.4rem' }}>
-                                <RefreshCcw size={24} /> Pouvoir du Mulligan
-                            </h3>
-                            <p style={{ color: '#e2e8f0', marginBottom: '10px', fontSize: '1.1rem', lineHeight: '1.5' }}>
-                                Voulez-vous vraiment défausser vos cartes actuelles pour piocher <strong>7 nouvelles questions</strong> ?
-                            </p>
-                            <p style={{ color: '#ef4444', fontSize: '0.9rem', fontStyle: 'italic', marginBottom: '25px' }}>
-                                Attention : Ce pouvoir n'est utilisable qu'<strong>une seule fois</strong> dans toute la partie !
-                            </p>
-                            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
-                                <button className="ghost-button" onClick={() => setShowMulliganModal(false)}>Annuler</button>
-                                <button className="ghost-button" style={{ background: 'rgba(245, 158, 11, 0.2)', borderColor: '#f59e0b', color: '#f59e0b', fontWeight: 'bold' }} onClick={confirmMulligan}>Confirmer</button>
-                            </div>
+            {showMulliganModal && (
+                <div className="centered-modal-overlay" onClick={() => setShowMulliganModal(false)}>
+                    <div className="custom-confirm-modal" onClick={e => e.stopPropagation()}>
+                        <h3 style={{ color: '#f59e0b', marginBottom: '15px' }}><RefreshCcw size={24} /> Pouvoir du Mulligan</h3>
+                        <p style={{ color: '#e2e8f0', marginBottom: '10px' }}>Défausser pour piocher <strong>7 nouvelles questions</strong> ?</p>
+                        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+                            <button className="ghost-button" onClick={() => setShowMulliganModal(false)}>Annuler</button>
+                            <button className="ghost-button" style={{ background: 'rgba(245, 158, 11, 0.2)', borderColor: '#f59e0b', color: '#f59e0b', fontWeight: 'bold' }} onClick={confirmMulligan}>Confirmer</button>
                         </div>
                     </div>
-                )
-            }
+                </div>
+            )}
         </div >
     );
 };
