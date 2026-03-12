@@ -208,7 +208,8 @@
     flex-shrink: 0;
     /* 🌟 Empêche cette section d'être écrasée si l'écran est petit */
     width: 100%;
-    min-height: 200px;
+    min-height: 270px;
+    max-height: 270px;
     /* Une bonne hauteur de base, mais s'adapte si besoin */
     padding: 10px 0px;
     background: #0f1115;
@@ -419,6 +420,12 @@
     gap: 15px;
     display: flex;
     flex-direction: column;
+    align-items: center;
+}
+
+
+.buttons-music-div {
+    display: flex;
     align-items: center;
 }
 
@@ -889,4 +896,22 @@
     color: var(--text-muted);
     opacity: 0.5;
     pointer-events: none;
+}
+
+/* --- ANIMATION D'ATTENTE (Points de suspension) --- */
+.loading-dots {
+    animation: pulseGhost 1.5s infinite ease-in-out;
+}
+
+@keyframes pulseGhost {
+    0% {
+        opacity: 0.3;
+    }
+    50% {
+        opacity: 1;
+        text-shadow: 0 0 15px var(--primary); /* Lueur magique au pic de l'animation */
+    }
+    100% {
+        opacity: 0.3;
+    }
 }

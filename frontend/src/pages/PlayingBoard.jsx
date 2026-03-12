@@ -1,10 +1,11 @@
 // src/pages/PlayingBoard.jsx
 import React, { useState, useEffect } from 'react';
-import { Send, VolumeX, Volume2, Hand, HelpCircle, Eye as EyeIcon, Sun, Moon, RefreshCcw, Check } from 'lucide-react';
+import { Music,EarOff, VolumeX, Volume2, Hand, HelpCircle, Eye as EyeIcon, Sun, Moon, RefreshCcw, Check } from 'lucide-react';
 import Card from '../components/Card';
 import CarnetBoard from '../components/CarnetBoard';
 import PlayerHand from '../components/PlayerHand';
 import { LiveDrawingPad } from '../components/ui/LiveDrawingPad';
+import DrawingModal from '../components/ui/DrawingModal';
 import { useGameAudio } from '../hooks/useGameAudio';
 
 const PlayingBoard = ({ game, socket, myProfile }) => {
@@ -25,7 +26,7 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
     const uniqueSelectedCardIds = [...new Set(selections.map(s => s.cardId))];
 
     // GESTION EFFETS SONORES
-    const { volume, setVolume, isMuted, setIsMuted, playTap, playShhh, toggleBgm } = useGameAudio();
+    const { volume, setVolume, bgmMuted, setBgmMuted, sfxMuted, setSfxMuted, playTap, playShhh, toggleBgm } = useGameAudio();
 
     useEffect(() => {
         if (toggleBgm) {
@@ -210,77 +211,58 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
 
     return (
         <div className="game-container">
+            <DrawingModal
+                socket={socket}
+                game={game}
+                turnState={turnState}
+                activeTeam={activeTeam}
+                showPadForAskQuestion={showPadForAskQuestion}
+                showPadForGuess={showPadForGuess}
+                showPadForEye={showPadForEye}
+            />
+
+
             <div className="game-top-section-wrapper">
-                <div className="game-logo-banner">
+                <div className="game-logo-banner" style={{ position: 'relative' }}>
                     <span className="logo-spark">✦</span>
                     <h1 className="game-main-title">SPIRIT LINK</h1>
                     <span className="logo-spark">✦</span>
 
-
-                    {/* 🌟 NOUVEAU : Contrôles audio */}
-                    <div style={{ position: 'absolute', right: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div className="buttons-music-div">
+                        {/* Bouton Musique */}
                         <button
-                            onClick={() => setIsMuted(!isMuted)}
-                            style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                            onClick={() => setBgmMuted(!bgmMuted)}
+                            style={{ background: 'transparent', border: 'none', color: bgmMuted ? '#ef4444' : 'var(--text-muted)', cursor: 'pointer', transition: 'color 0.2s' }}
+                            title="Couper la musique"
                         >
-                            {isMuted || volume === 0 ? <VolumeX size={24} /> : <Volume2 size={24} />}
+                            <Music size={22} />
                         </button>
+
+                        {/* Bouton Bruitages */}
+                        <button
+                            onClick={() => setSfxMuted(!sfxMuted)}
+                            style={{ background: 'transparent', border: 'none', color: sfxMuted ? '#ef4444' : 'var(--text-muted)', cursor: 'pointer', transition: 'color 0.2s' }}
+                            title="Couper les bruitages"
+                        >
+                            {sfxMuted ? <VolumeX size={22} /> : <Volume2 size={22} />}
+                        </button>
+
+                        {/* Curseur de volume global */}
                         <input
                             type="range"
                             min="0" max="1" step="0.05"
-                            value={isMuted ? 0 : volume}
+                            value={volume}
                             onChange={(e) => {
-                                setIsMuted(false);
+                                if (bgmMuted) setBgmMuted(false);
+                                if (sfxMuted) setSfxMuted(false);
                                 setVolume(parseFloat(e.target.value));
                             }}
-                            style={{ width: '80px', accentColor: 'var(--primary)' }}
+                            style={{ width: '80px', accentColor: 'var(--primary)', marginLeft: '5px' }}
                         />
                     </div>
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", position: 'relative' }}>
-
-                    {/* 🌟 NOUVEAU : Le calque absolu pour le Drawing Pad */}
-                    {(showPadForAskQuestion || showPadForGuess || showPadForEye) && (
-                        <div style={{
-                            position: 'absolute',
-                            top: '100px', // Ajuste cette valeur pour le placer bien sur le carnet
-                            left: 0,
-                            right: 0,
-                            display: 'flex',
-                            justifyContent: getPadAlignment(),
-                            padding: '0 100px', // Évite qu'il ne colle complètement aux bords
-                            zIndex: 2000,
-                            pointerEvents: 'none' // Permet de cliquer à travers la zone transparente
-                        }}>
-                            <div style={{ pointerEvents: 'auto', background: 'rgba(15, 23, 42, 1)', padding: '20px', borderRadius: '16px', border: '1px solid var(--primary)', boxShadow: '0 20px 40px rgba(0,0,0,0.8)' }}>
-
-                                {showPadForAskQuestion && (
-                                    <>
-                                        <p style={{ color: 'var(--primary)', fontSize: '1.1rem', marginBottom: '2px', textAlign: 'center' }}>{turnState.selectedQuestion}</p>
-                                        <LiveDrawingPad socket={socket} gameId={game.gameId} team={game.currentTurn} canDraw={true} padMode="NORMAL" />
-                                    </>
-                                )}
-
-                                {showPadForGuess && (
-                                    <>
-                                        <p style={{ color: 'var(--primary)', fontSize: '1.1rem', marginBottom: '2px', textAlign: 'center' }}>Tentative</p>
-                                        <LiveDrawingPad socket={socket} gameId={game.gameId} team={activeTeam} canDraw={true} padMode="GUESS" />
-                                    </>
-                                )}
-
-                                {showPadForEye && (
-                                    <>
-                                        <p style={{ color: 'var(--primary)', fontSize: '1.1rem', marginBottom: '2px', textAlign: 'center' }}>
-                                            <EyeIcon size={16} style={{ verticalAlign: 'middle' }} /> {turnState.eyeTarget.questionId}
-                                        </p>
-                                        <LiveDrawingPad socket={socket} gameId={game.gameId} team={turnState.eyeTarget.team} canDraw={true} padMode={turnState.eyeTarget.step === 1 ? 'EYE_STEP_1' : 'EYE_STEP_2'} initialImage={turnState.eyeTarget.initialImage} />
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
                     <div className="game-top-section" style={{ width: "100%" }}>
                         {renderTeamMenu('SUN', game.teams?.sun)}
 
@@ -330,10 +312,34 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
                         )}
 
                         {/* ÉTAT 1 : L'Esprit choisit une question */}
+                        {/* ÉTAT 1 : L'Esprit choisit une question */}
                         {isSpirit && isMyTurn && turnState.action === 'ASK_QUESTION' && !turnState.selectedQuestion && (
-                            <div className="bottom-action-panel active-turn">
-                                <h4 style={{ color: 'var(--primary)', marginBottom: '20px' }}>Vos Médiums vous proposent ces deux questions :</h4>
+                            <div className="bottom-action-panel active-turn" style={{ padding: '5px 50px', background: 'linear-gradient(to top, rgba(15,23,42,0.95), rgba(30,27,75,0.8))' }}>
+                                <h4 style={{ color: '#a78bfa', marginBottom: '15px', marginTop: '10px', fontFamily: 'var(--font-serif)', fontSize: '1.3rem', fontWeight: 'normal', letterSpacing: '1px' }}>
+                                    ✧ Quelle interrogation vous inspire  ? ✧
+                                </h4>
+
                                 <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
+                                    <button
+                                        className="ghost-button btn-primary"
+                                        onClick={handleSelectQuestion}
+                                        disabled={uniqueSelectedCardIds.length !== 1}
+                                        style={{
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            maxWidth: '115px',
+                                            marginRight: '50px',
+                                            fontSize: '1rem',
+                                            background: uniqueSelectedCardIds.length === 1 ? '' : 'rgba(20, 184, 166, 0.1)',
+                                            boxShadow: uniqueSelectedCardIds.length === 1 ? '0 0 20px rgba(20, 184, 166, 0.6)' : 'none',
+                                            transition: 'all 0.3s'
+                                        }}
+                                    >
+                                        <Check size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                                        REPONDRE A CETTE CARTE
+                                        <Check size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                                    </button>
+
                                     {turnState.pendingQuestions?.map(q => {
                                         const cardBadges = selections.filter(s => s.cardId === q.id);
                                         const isSelected = cardBadges.length > 0;
@@ -342,68 +348,206 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
                                         );
                                     })}
                                 </div>
-                                <button className="ghost-button btn-primary" onClick={handleSelectQuestion} disabled={uniqueSelectedCardIds.length !== 1}>
-                                    <Check size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> VALIDER LA QUESTION
-                                </button>
                             </div>
                         )}
 
                         {/* ÉTAT 2 : Bouton Silencio pour le Médium (Le pad est en haut) */}
+                        {/* ÉTAT 2 : Bouton Silencio pour le Médium (Le pad est en haut) */}
                         {isMyTurn && turnState.action === 'ASK_QUESTION' && turnState.selectedQuestion && isMedium && (
-                            <div className="bottom-action-panel active-turn">
-                                <p style={{ marginBottom: '10px', fontSize: '1.1rem' }}>L'Esprit rédige l'indice. Appuyez quand vous avez compris.</p>
-                                <button className="ghost-button giant-btn" style={{ background: '#ef4444', color: 'white', borderColor: '#ef4444' }} onClick={() => socket.emit('silencio', { gameId: game.gameId, team: activeTeam })}>
-                                    <Hand size={24} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '10px' }} /> SILENCIO !
+                            <div
+                                className="bottom-action-panel active-turn"
+                                style={{
+                                    padding: '25px 40px',
+                                    width: '100%',
+                                    maxWidth: '550px', // 🌟 Plus large pour que le texte respire
+                                    minHeight: '160px', // 🌟 Hauteur fixe pour un bloc bien proportionné
+                                    justifyContent: 'center',
+                                    background: 'linear-gradient(to top, rgba(15,23,42,0.95), rgba(49,27,75,0.8))' // Teinte légèrement pourpre
+                                }}
+                            >
+                                <h4 style={{
+                                    color: '#a78bfa',
+                                    marginBottom: '25px',
+                                    marginTop: '0',
+                                    fontFamily: 'var(--font-serif)',
+                                    fontSize: '1.25rem',
+                                    fontWeight: 'normal',
+                                    letterSpacing: '1px',
+                                    textAlign: 'center', // 🌟 Centrage parfait
+                                    lineHeight: '1.5'
+                                }}>
+                                    ✧ L'Esprit trace son message... ✧<br />
+                                    <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>Interrompez-le dès que le sens vous apparaît.</span>
+                                </h4>
+
+                                <button
+                                    className="ghost-button giant-btn"
+                                    style={{
+                                        background: '#ef4444',
+                                        color: 'white',
+                                        borderColor: '#ef4444',
+                                        boxShadow: '0 0 25px rgba(239, 68, 68, 0.4)', // 🌟 Lueur rouge magique
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '3px',
+                                        transition: 'all 0.2s ease-in-out'
+                                    }}
+                                    onClick={() => socket.emit('silencio', { gameId: game.gameId, team: activeTeam })}
+                                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                >
+                                    <Hand size={26} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '12px', marginBottom: '4px' }} />
+                                    SILENCIO !
                                 </button>
                             </div>
                         )}
 
                         {isMyTurn && isSpirit && turnState.action === 'GUESS_OBJECT' && (
-                            <div className="bottom-action-panel active-turn">
-                                <p style={{ color: 'var(--primary)', fontSize: '1.2rem', margin: '0' }}>
-                                    Vos médiums tentent de deviner votre objet secret . . .
-                                </p>
+                            <div
+                                className="bottom-action-panel active-turn"
+                                style={{
+                                    padding: '25px 40px',
+                                    width: '100%',
+                                    maxWidth: '550px',
+                                    minHeight: '160px',
+                                    justifyContent: 'center',
+                                    background: 'linear-gradient(to top, rgba(15,23,42,0.95), rgba(30,27,75,0.8))'
+                                }}
+                            >
+                                <h4 style={{
+                                    color: '#a78bfa',
+                                    margin: '0',
+                                    fontFamily: 'var(--font-serif)',
+                                    fontSize: '1.25rem',
+                                    fontWeight: 'normal',
+                                    letterSpacing: '1px',
+                                    textAlign: 'center',
+                                    lineHeight: '1.5'
+                                }}>
+                                    ✧ Vos Médiums établissent le lien ... ✧<br />
+                                    <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>
+                                        Ils essayent de trouver votre Objet Secret.
+                                    </span>
+                                </h4>
+
+                                {/* Petite animation de points de suspension pour marquer l'attente */}
+                                <div className="loading-dots" style={{ fontSize: '2rem', color: 'var(--primary)', marginTop: '10px', letterSpacing: '8px' }}>
+                                    ...
+                                </div>
                             </div>
                         )}
 
-                        {/* ÉTAT 4b : L'Esprit Juge la lettre proposée */}
-                        {isMyTurn && turnState.action === 'JUDGE_GUESS' && (
-                            <div className="bottom-action-panel active-turn">
-                                <p style={{ color: 'var(--primary)', fontSize: '1.2rem', margin: '0 0 10px 0' }}>
-                                    {isSpirit ? "Est-ce la bonne lettre ?" : "En attente du jugement de votre Esprit..."}
-                                </p>
+                        {/* ÉTAT 5 : L'Esprit Juge la lettre proposée */}
+                {isMyTurn && turnState.action === 'JUDGE_GUESS' && (
+                    <div 
+                        className="bottom-action-panel active-turn" 
+                        style={{ 
+                            width: '100%',
+                            maxWidth: '450px', 
+                            justifyContent: 'center',
+                            background: 'linear-gradient(to top, rgba(15,23,42,0.95), rgba(30,27,75,0.8))' 
+                        }}
+                    >
+                        <h4 style={{ 
+                            color: '#a78bfa', 
+                            marginBottom: isSpirit ? '15px' : '0', 
+                            marginTop: '0', 
+                            fontFamily: 'var(--font-serif)', 
+                            fontSize: '1.25rem', 
+                            fontWeight: 'normal', 
+                            letterSpacing: '1px',
+                            textAlign: 'center',
+                            lineHeight: '1.5'
+                        }}>
+                            {isSpirit ? (
+                                <>✧ Est-ce la bonne lettre ? ✧</>
+                            ) : (
+                                <>✧ En attente du jugement de votre Esprit... ✧</>
+                            )}
+                        </h4>
 
-                                {isSpirit && (
-                                    // 🌟 NOUVEAU : flex-wrap pour que les boutons passent en dessous si pas de place
-                                    <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
-                                        <div style={{ padding: '15px', background: 'rgba(255,255,255,0.05)', border: '2px solid var(--primary)', borderRadius: '12px' }}>
-                                            {turnState.pendingGuessLetter?.isDot ? (
-                                                <span style={{ fontSize: '3rem', fontWeight: 'bold', lineHeight: '1' }}>.</span>
-                                            ) : (
-                                                <img src={turnState.pendingGuessLetter?.imageBase64} alt="Tentative" style={{ height: '80px' }} />
-                                            )}
-                                        </div>
+                        {!isSpirit && (
+                             <div className="loading-dots" style={{ fontSize: '2rem', color: 'var(--primary)', marginTop: '10px', letterSpacing: '8px' }}>...</div>
+                        )}
 
-                                        <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
-                                            <button
-                                                className="ghost-button"
-                                                style={{ background: '#0fad79', color: 'white', borderColor: '#0fad79', padding: '15px 20px' }}
-                                                onClick={() => socket.emit('judge_guess_letter', { gameId: game.gameId, team: activeTeam, isCorrect: true })}
-                                            >
-                                                Tapoter
-                                            </button>
-                                            <button
-                                                className="ghost-button"
-                                                style={{ background: '#c43333', color: 'white', borderColor: '#c43333', padding: '15px 20px' }}
-                                                onClick={() => socket.emit('judge_guess_letter', { gameId: game.gameId, team: activeTeam, isCorrect: false })}
-                                            >
-                                                Chuuut !
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
+                        {isSpirit && (
+                            <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '25px' }}>
+                                
+                                {/* Cadre stylisé pour le dessin de la lettre */}
+                                <div style={{ 
+                                    padding: '10px', 
+                                    background: 'var(--bg-card)', 
+                                    border: '1px solid var(--primary)', 
+                                    borderRadius: '8px',
+                                    boxShadow: '0 0 15px rgba(20, 184, 166, 0.2)',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    minWidth: '100px',
+                                    minHeight: '100px'
+                                }}>
+                                    {turnState.pendingGuessLetter?.isDot ? (
+                                        <span style={{ fontSize: '3rem', fontWeight: 'bold', lineHeight: '1', color: 'var(--text-main)' }}>.</span>
+                                    ) : (
+                                        <img src={turnState.pendingGuessLetter?.imageBase64} alt="Tentative" style={{ height: '80px', filter: 'drop-shadow(0px 0px 5px rgba(255,255,255,0.5))' }} />
+                                    )}
+                                </div>
+
+                                {/* Les boutons d'action */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    
+                                    {/* Bouton OUI (Coup sur la table) */}
+                                    <button
+                                        className="ghost-button"
+                                        style={{ 
+                                            background: 'rgba(20, 184, 166, 0.15)', 
+                                            color: 'var(--primary)', 
+                                            borderColor: 'var(--primary)', 
+                                            padding: '12px 25px',
+                                            fontSize: '1.1rem',
+                                            letterSpacing: '2px',
+                                            textTransform: 'uppercase',
+                                            boxShadow: '0 0 10px rgba(20, 184, 166, 0.2)',
+                                            transition: 'all 0.2s',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '10px'
+                                        }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--primary)'; e.currentTarget.style.color = 'var(--bg-main)'; e.currentTarget.style.transform = 'scale(1.05)'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(20, 184, 166, 0.15)'; e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.transform = 'scale(1)'; }}
+                                        onClick={() => socket.emit('judge_guess_letter', { gameId: game.gameId, team: activeTeam, isCorrect: true })}
+                                    >
+                                        <Hand size={20} /> TAPPER (Oui)
+                                    </button>
+                                    
+                                    {/* Bouton NON (Chuuut) */}
+                                    <button
+                                        className="ghost-button"
+                                        style={{ 
+                                            background: 'rgba(156, 163, 175, 0.1)', 
+                                            color: 'var(--text-muted)', 
+                                            borderColor: 'var(--text-muted)', 
+                                            padding: '12px 25px',
+                                            fontSize: '1.1rem',
+                                            letterSpacing: '2px',
+                                            textTransform: 'uppercase',
+                                            transition: 'all 0.2s',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '10px'
+                                        }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; e.currentTarget.style.transform = 'scale(1.05)'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--text-muted)'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'rgba(156, 163, 175, 0.1)'; e.currentTarget.style.transform = 'scale(1)'; }}
+                                        onClick={() => socket.emit('judge_guess_letter', { gameId: game.gameId, team: activeTeam, isCorrect: false })}
+                                    >
+                                         <EarOff size={20} /> CHUUUT... (Non)
+                                    </button>
+                                </div>
                             </div>
                         )}
+                    </div>
+                )}
 
                         {/* ÉTAT 5 : Le Médium utilise l'Oeil (Bouton Passer) */}
                         {isMedium && isMyTurn && turnState.action === 'EYE_POWER_SELECTION' && (
@@ -474,7 +618,7 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
                 <div className="centered-modal-overlay" onClick={() => setShowMulliganModal(false)}>
                     <div className="custom-confirm-modal" onClick={e => e.stopPropagation()}>
                         <h3 style={{ color: '#f59e0b', marginBottom: '15px' }}><RefreshCcw size={24} /> Pouvoir du Mulligan</h3>
-                        <p style={{ color: '#e2e8f0', marginBottom: '10px' }}>Défausser pour piocher <strong>7 nouvelles questions</strong> ?</p>
+                        <p style={{ color: '#e2e8f0', marginBottom: '10px' }}>Défausser votre main pour piocher <strong>7 nouvelles cartes questions</strong> ?</p>
                         <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
                             <button className="ghost-button" onClick={() => setShowMulliganModal(false)}>Annuler</button>
                             <button className="ghost-button" style={{ background: 'rgba(245, 158, 11, 0.2)', borderColor: '#f59e0b', color: '#f59e0b', fontWeight: 'bold' }} onClick={confirmMulligan}>Confirmer</button>

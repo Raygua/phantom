@@ -1,0 +1,106 @@
+.drawing-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    z-index: 3000;
+}
+
+.notebook-page {
+    position: relative;
+    background-color: #0f172a; /* Bleu très très sombre */
+    
+    /* Effet de lignes de cahier subtiles */
+    background-image: repeating-linear-gradient(
+        transparent,
+        transparent 34px,
+        rgba(255, 255, 255, 0.05) 34px,
+        rgba(255, 255, 255, 0.05) 35px
+    );
+    background-position: 0 40px; /* Aligne les lignes sous le texte */
+    
+    padding: 40px 40px 30px 60px; /* Plus d'espace à gauche pour la marge rouge */
+    border-radius: 4px 16px 16px 4px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    
+    /* Ombre interne pour l'effet reliure à gauche + grosse ombre portée */
+    box-shadow: 
+        inset 10px 0 15px rgba(0, 0, 0, 0.8),
+        0 25px 50px rgba(0, 0, 0, 0.8);
+        
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 95vw;
+    animation: popInNotebook 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* La ligne de marge rouge typique des cahiers */
+.notebook-margin-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 45px;
+    width: 2px;
+    background-color: rgba(239, 68, 68, 0.3); /* Rouge semi-transparent */
+    z-index: 0;
+}
+
+/* Un petit bout de "scotch" translucide en haut */
+.notebook-tape {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%) rotate(-3deg);
+    width: 120px;
+    height: 30px;
+    background-color: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(2px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+    z-index: 10;
+}
+
+.notebook-content {
+    position: relative;
+    z-index: 1; /* S'assure que le contenu est au-dessus des lignes */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.notebook-subtitle {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 5px;
+    font-family: monospace;
+}
+
+.notebook-title {
+    color: var(--primary);
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 20px;
+    text-align: center;
+    font-family: var(--font-serif);
+    letter-spacing: 1px;
+}
+
+@keyframes popInNotebook {
+    from {
+        opacity: 0;
+        transform: scale(0.85) translateY(30px) rotate(-2deg);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0) rotate(0deg);
+    }
+}

@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 
 export const useGameAudio = () => {
     const [volume, setVolume] = useState(0.5); 
-    const [isMuted, setIsMuted] = useState(false);
+    const [bgmMuted, setBgmMuted] = useState(false); // 🌟 NOUVEAU
+    const [sfxMuted, setSfxMuted] = useState(false); // 🌟 NOUVEAU
 
     const bgmRef = useRef(null);
     const hitsRef = useRef([]);
@@ -24,15 +25,16 @@ export const useGameAudio = () => {
     }
 
     useEffect(() => {
-        const actualVolume = isMuted ? 0 : volume;
-
+        // La musique se coupe si bgmMuted est true
         if (bgmRef.current) {
-            bgmRef.current.volume = actualVolume * 0.05; 
+            bgmRef.current.volume = bgmMuted ? 0 : volume * 0.1; 
         }
         
-        hitsRef.current.forEach(audio => audio.volume = actualVolume);
-        shhhsRef.current.forEach(audio => audio.volume = actualVolume);
-    }, [volume, isMuted]);
+        // Les SFX se coupent si sfxMuted est true
+        const sfxVolume = sfxMuted ? 0 : volume;
+        hitsRef.current.forEach(audio => audio.volume = sfxVolume);
+        shhhsRef.current.forEach(audio => audio.volume = sfxVolume);
+    }, [volume, bgmMuted, sfxMuted]);
 
     // 🌟 Nouvelle gestion des promesses (Évite les AbortError)
     const safePlay = (audioElement) => {
@@ -76,5 +78,10 @@ export const useGameAudio = () => {
         }
     }, []);
 
-    return { volume, setVolume, isMuted, setIsMuted, playTap, playShhh, toggleBgm };
+    return { 
+        volume, setVolume, 
+        bgmMuted, setBgmMuted, 
+        sfxMuted, setSfxMuted, 
+        playTap, playShhh, toggleBgm 
+    };
 };
