@@ -34,7 +34,7 @@ const Card = ({ card, isFaceUp, isSelected, onClick, style, selectionBadges = []
                 {/* VERSO (Face cachée) */}
                 <div className="phantom-card-face phantom-card-back">
                     <div className="card-logo">
-                        ✦<br/>Phantom<br/>Ink<br/>✦
+                        ✦<br/>Spirit<br/>Link<br/>✦
                     </div>
                 </div>
             </div>

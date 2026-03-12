@@ -201,34 +201,34 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
                     {(showPadForAskQuestion || showPadForGuess || showPadForEye) && (
                         <div style={{
                             position: 'absolute',
-                            top: '50px', // Ajuste cette valeur pour le placer bien sur le carnet
+                            top: '100px', // Ajuste cette valeur pour le placer bien sur le carnet
                             left: 0,
                             right: 0,
                             display: 'flex',
                             justifyContent: getPadAlignment(),
-                            padding: '0 50px', // Évite qu'il ne colle complètement aux bords
-                            zIndex: 100,
+                            padding: '0 100px', // Évite qu'il ne colle complètement aux bords
+                            zIndex: 2000,
                             pointerEvents: 'none' // Permet de cliquer à travers la zone transparente
                         }}>
                             <div style={{ pointerEvents: 'auto', background: 'rgba(15, 23, 42, 1)', padding: '20px', borderRadius: '16px', border: '1px solid var(--primary)', boxShadow: '0 20px 40px rgba(0,0,0,0.8)' }}>
                                 
                                 {showPadForAskQuestion && (
                                     <>
-                                        <p style={{ color: 'var(--primary)', fontSize: '1.1rem', marginBottom: '10px', textAlign: 'center' }}>{turnState.selectedQuestion}</p>
+                                        <p style={{ color: 'var(--primary)', fontSize: '1.1rem', marginBottom: '2px', textAlign: 'center' }}>{turnState.selectedQuestion}</p>
                                         <LiveDrawingPad socket={socket} gameId={game.gameId} team={game.currentTurn} canDraw={true} padMode="NORMAL" />
                                     </>
                                 )}
 
                                 {showPadForGuess && (
                                     <>
-                                        <p style={{ color: 'var(--primary)', fontSize: '1.1rem', marginBottom: '10px', textAlign: 'center' }}>Tentative</p>
+                                        <p style={{ color: 'var(--primary)', fontSize: '1.1rem', marginBottom: '2px', textAlign: 'center' }}>Tentative</p>
                                         <LiveDrawingPad socket={socket} gameId={game.gameId} team={activeTeam} canDraw={true} padMode="GUESS" />
                                     </>
                                 )}
 
                                 {showPadForEye && (
                                     <>
-                                        <p style={{ color: 'var(--primary)', fontSize: '1.1rem', marginBottom: '10px', textAlign: 'center' }}>
+                                        <p style={{ color: 'var(--primary)', fontSize: '1.1rem', marginBottom: '2px', textAlign: 'center' }}>
                                             <EyeIcon size={16} style={{ verticalAlign: 'middle' }} /> {turnState.eyeTarget.questionId}
                                         </p>
                                         <LiveDrawingPad socket={socket} gameId={game.gameId} team={turnState.eyeTarget.team} canDraw={true} padMode={turnState.eyeTarget.step === 1 ? 'EYE_STEP_1' : 'EYE_STEP_2'} initialImage={turnState.eyeTarget.initialImage} />
@@ -259,16 +259,19 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
             </div>
 
             {/* --- ACTIONS DU BAS --- */}
-            <div className="game-bottom-section" style={{ flexDirection: 'column', alignItems: 'center' }}>
+            { !(isMedium && isMyTurn && showPadForGuess) &&
+            !(isSpirit && isMyTurn && showPadForEye) && (
+            <div className="game-bottom-section">
                 {isSpirit && (
-                    <div style={{ color: '#ffffff', fontSize: '1.2rem', fontWeight: 'bold', textShadow: '0 0 10px rgba(255, 255, 255, 0.5)', marginBottom: '15px' }}>
-                        OBJET SECRET : {game.secretObject}.
+                    <div className='secret-object-spirit'>
+                       <span> OBJET SECRET : </span>
+                       <span style={{display:'flex', width:'100%', justifyContent:'space-between', alignItems:'anchor-center'}}><span className="logo-spark">✦</span> {game.secretObject}.<span className="logo-spark">✦</span></span>
                     </div>
                 )}
 
                 {/* ÉTAT 0 : Médium choisit de Proposer ou Deviner */}
                 {isMedium && isMyTurn && !turnState.action && (
-                    <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
+                    <div className="triple-actions">
                         <button className="ghost-button btn-primary" onClick={handleProposeQuestions} disabled={uniqueSelectedCardIds.length !== 2}>
                             <HelpCircle size={18} /> PROPOSER ({uniqueSelectedCardIds.length}/2)
                         </button>
@@ -309,6 +312,14 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
                          <button className="ghost-button giant-btn" style={{ background: '#ef4444', color: 'white', borderColor: '#ef4444' }} onClick={() => socket.emit('silencio', { gameId: game.gameId, team: activeTeam })}>
                              <Hand size={24} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '10px' }} /> SILENCIO !
                          </button>
+                    </div>
+                )}
+
+                {isMyTurn && isSpirit && turnState.action === 'GUESS_OBJECT' && (
+                    <div className="bottom-action-panel active-turn">
+                        <p style={{ color: 'var(--primary)', fontSize: '1.2rem', margin: '0' }}>
+                            Vos médiums tentent de deviner votre objet secret . . .
+                        </p>
                     </div>
                 )}
 
@@ -396,6 +407,7 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
                     </div>
                 )}
             </div>
+            )}
 
             {/* --- MODALES --- */}
             {historyModal && (

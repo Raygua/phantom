@@ -138,7 +138,7 @@ export function LiveDrawingPad({ socket, gameId, team, canDraw, initialImage, pa
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
             <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
                 <div>
-                    <h4 style={{ margin: 0, color: 'var(--text-muted)' }}>{titleText}</h4>
+                    <h4 style={{ marginTop: '10px', marginBottom: '10px', color: 'var(--text-muted)' }}>{titleText}</h4>
 
                     <canvas
                         ref={canvasRef}

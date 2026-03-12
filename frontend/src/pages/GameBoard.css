@@ -9,39 +9,52 @@
     height: 100dvh;
     margin: 0 auto;
     /* On enlève le padding ici pour le mettre dans les zones enfants */
-    padding: 0; 
+    padding: 0;
     box-sizing: border-box;
     /* On empêche le scroll sur TOUTE la page, on va le mettre uniquement au milieu */
-    overflow: hidden; 
+    overflow: hidden;
 }
 
 .game-top-section-wrapper {
-    flex: 1; /* Prend tout l'espace disponible */
-    min-height: 0; /* Autorise le scroll intérieur */
-    overflow-y: auto; /* Autorise le scroll vertical ici si besoin */
+    flex: 1;
+    /* Prend tout l'espace disponible */
+    min-height: 0;
+    /* Autorise le scroll intérieur */
+    overflow-y: auto;
+    /* Autorise le scroll vertical ici si besoin */
     overflow-x: hidden;
-    padding: 30px 15px; /* On augmente un peu le padding vertical pour respirer */
+    padding: 30px 15px;
+    /* On augmente un peu le padding vertical pour respirer */
     width: 100%;
     display: flex;
     flex-direction: column;
-    align-items: center; /* Centre horizontalement (comme avant) */
+    align-items: center;
+    /* Centre horizontalement (comme avant) */
 
     /* 🌟 NOUVEAU : Centre VERTICALEMENT le plateau au milieu de l'espace disponible */
-    justify-content: center;
-    
+
     box-sizing: border-box;
+}
+
+.game-top-section-wrapper::before,
+.game-top-section-wrapper::after {
+    content: '';
+    margin: auto;
 }
 
 .game-top-section-wrapper::-webkit-scrollbar {
     width: 8px;
 }
+
 .game-top-section-wrapper::-webkit-scrollbar-track {
     background: rgba(0, 0, 0, 0.2);
 }
+
 .game-top-section-wrapper::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.2);
     border-radius: 4px;
 }
+
 .game-top-section-wrapper::-webkit-scrollbar-thumb:hover {
     background: var(--primary);
 }
@@ -51,13 +64,13 @@
     display: grid;
     grid-template-columns: minmax(130px, 250px) 1fr minmax(130px, 250px);
     gap: 20px;
-    
+
     /* 🌟 NOUVEAU : On limite la taille du plateau pour qu'il ne s'étire pas à l'infini */
     width: 100%;
-    max-width: 2000px; 
-    
+    max-width: 2000px;
+
     /* 🌟 NOUVEAU : On le centre au milieu de l'écran */
-    margin: 0 auto; 
+    margin: 0 auto;
     justify-content: center;
 }
 
@@ -192,17 +205,23 @@
 
 /* --- BAS : LA MAIN DU JOUEUR --- */
 .game-bottom-section {
-    flex-shrink: 0; /* 🌟 Empêche cette section d'être écrasée si l'écran est petit */
+    flex-shrink: 0;
+    /* 🌟 Empêche cette section d'être écrasée si l'écran est petit */
     width: 100%;
-    min-height: 300px; /* Une bonne hauteur de base, mais s'adapte si besoin */
-    padding: 20px 15px;
-    background: #0f1115; /* Fond sombre pour la séparer du carnet qui scrolle en dessous */
+    min-height: 200px;
+    /* Une bonne hauteur de base, mais s'adapte si besoin */
+    padding: 10px 0px;
+    background: #0f1115;
+    /* Fond sombre pour la séparer du carnet qui scrolle en dessous */
     border-top: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 -10px 30px rgba(0,0,0,0.5); /* Petite ombre vers le haut */
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
+    /* Petite ombre vers le haut */
     display: flex;
+    flex-direction: row;
     justify-content: center;
     align-items: center;
-    z-index: 200; /* Toujours au-dessus du reste */
+    z-index: 200;
+    /* Toujours au-dessus du reste */
     box-sizing: border-box;
 }
 
@@ -215,7 +234,7 @@
 
 .player-hand-cards {
     display: flex;
-    padding: 0px 10px 0 10px;
+    padding: 40px 15px 0px 15px;
     align-items: flex-end;
 }
 
@@ -383,6 +402,26 @@
     }
 }
 
+.triple-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.secret-object-spirit {
+    color: '#ffffff';
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    margin-bottom: 5px;
+    margin-right: 20px;
+    gap: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
 /* --- RESPONSIVE MOBILE --- */
 @media (max-width: 1200px) {
     .game-container {
@@ -442,19 +481,30 @@
     .game-bottom-section {
         padding-top: 20px;
         background: #0f1115;
+        flex-direction: column;
         z-index: 100;
         border-top: 1px solid #333;
         box-sizing: border-box;
+    }
+
+    .triple-actions {
+        flex-direction: row;
+        align-items: unset;
+    }
+
+    .secret-object-spirit {
+        flex-direction: row;
+        align-items: unset;
     }
 
     .player-hand-cards {
         display: flex;
         flex-wrap: nowrap;
         overflow-x: auto;
-        
+
         /* 🌟 CHANGEMENT ICI : On passe à 40px en haut pour laisser respirer les badges */
-        padding: 40px 15px 20px 15px; 
-        
+        padding: 40px 15px 0px 15px;
+
         gap: 15px;
         justify-content: flex-start;
         scroll-snap-type: x mandatory;
@@ -476,17 +526,20 @@
     .game-container {
         /* On garde la hauteur fixe mais on s'assure que le contenu ne déborde pas */
         height: 100vh;
-        height: 100dvh; /* Version mobile précise */
+        height: 100dvh;
+        /* Version mobile précise */
         display: flex;
         flex-direction: column;
-        overflow: hidden; 
+        overflow: hidden;
         padding: 0;
     }
 
     /* 1. On crée une zone de défilement pour le contenu du haut */
     .game-top-section-wrapper {
-        flex: 1; /* Prend tout l'espace disponible */
-        overflow-y: auto; /* Autorise le scroll vertical ici */
+        flex: 1;
+        /* Prend tout l'espace disponible */
+        overflow-y: auto;
+        /* Autorise le scroll vertical ici */
         padding: 10px;
         width: 100%;
         display: flex;
@@ -504,7 +557,7 @@
 
     /* 2. On fixe la section du bas */
     .game-bottom-section {
-        flex-shrink: 0; 
+        flex-shrink: 0;
         width: 100%;
         background: #0f1115;
         z-index: 100;
@@ -513,7 +566,7 @@
         padding-bottom: 10px;
         margin-top: 0px;
         /* 🌟 Sur mobile, on repasse en auto car on a besoin de plus de place verticale */
-        height: auto; 
+        height: auto;
         min-height: auto;
     }
 }
@@ -564,7 +617,7 @@
     background: rgba(15, 23, 42, 0.95);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
-    padding: 20px 40px;
+    padding: 10px 20px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -752,7 +805,8 @@
 .game-main-title {
     font-family: var(--font-serif);
     font-size: 2.2rem;
-    letter-spacing: 12px; /* 🌟 Très important pour le look "Luxe/Mystère" */
+    letter-spacing: 12px;
+    /* 🌟 Très important pour le look "Luxe/Mystère" */
     margin: 0;
     background: linear-gradient(to bottom, #ffffff, #94a3b8);
     background-clip: text;
@@ -783,8 +837,17 @@
 }
 
 @keyframes pulseGlow {
-    0%, 100% { opacity: 0.8; transform: scale(1); }
-    50% { opacity: 1; transform: scale(1.2); }
+
+    0%,
+    100% {
+        opacity: 0.8;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.2);
+    }
 }
 
 /* 📱 Ajustement mobile */
@@ -808,9 +871,11 @@
     letter-spacing: 4px;
     outline: none;
     transition: all 0.3s ease;
-    word-wrap: break-word; /* 🌟 Force le retour à la ligne si le mot est trop long */
+    word-wrap: break-word;
+    /* 🌟 Force le retour à la ligne si le mot est trop long */
     overflow-wrap: break-word;
-    white-space: pre-wrap; /* Garde les espaces mais revient à la ligne */
+    white-space: pre-wrap;
+    /* Garde les espaces mais revient à la ligne */
 }
 
 .ghost-input-editable:focus {
