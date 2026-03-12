@@ -212,6 +212,7 @@ export const initPhantomSocket = (io) => {
         io.to(`game:${gameId}`).emit('clear_live_pad', { team });
 
         io.to(`game:${gameId}`).emit('silencio_called', { team });
+        io.to(`game:${gameId}`).emit('play_sound', { sound: 'SHHH' });
         io.to(`game:${gameId}`).emit('game_state_update', game); // MAJ globale pour changer de tour
       } catch (error) {
         socket.emit('game_error', error.message);
@@ -258,6 +259,11 @@ export const initPhantomSocket = (io) => {
       try {
         const game = gameManager.getGame(gameId);
         game.judgeGuessLetter(team, isCorrect);
+
+
+        const soundType = isCorrect ? 'TAP' : 'SHHH';
+        io.to(`game:${gameId}`).emit('play_sound', { sound: soundType });
+
         io.to(`game:${gameId}`).emit('game_state_update', game);
       } catch (error) {
         socket.emit('game_error', error.message);
@@ -373,6 +379,12 @@ export const initPhantomSocket = (io) => {
         socket.emit('game_error', error.message);
       }
     });
+
+
+
+    // -- EFFETS SONORES ---
+
+
 
     // --- GESTION DE LA DÉCONNEXION ET DU NETTOYAGE ---
     socket.on('disconnect', () => {

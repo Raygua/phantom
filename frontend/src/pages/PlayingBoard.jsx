@@ -1,10 +1,11 @@
 // src/pages/PlayingBoard.jsx
 import React, { useState, useEffect } from 'react';
-import { Send, Hand, HelpCircle, Eye as EyeIcon, Sun, Moon, RefreshCcw, Check } from 'lucide-react';
+import { Send, VolumeX, Volume2, Hand, HelpCircle, Eye as EyeIcon, Sun, Moon, RefreshCcw, Check } from 'lucide-react';
 import Card from '../components/Card';
 import CarnetBoard from '../components/CarnetBoard';
 import PlayerHand from '../components/PlayerHand';
 import { LiveDrawingPad } from '../components/ui/LiveDrawingPad';
+import { useGameAudio } from '../hooks/useGameAudio';
 
 const PlayingBoard = ({ game, socket, myProfile }) => {
     const isMedium = myProfile.role === 'MEDIUM';
@@ -20,10 +21,31 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
     const [selections, setSelections] = useState([]);
     const [historyModal, setHistoryModal] = useState(null);
 
-    // 🌟 NOUVEAU : État pour capter l'image en temps réel (pour le CarnetBoard)
     const [liveImage, setLiveImage] = useState(null);
-
     const uniqueSelectedCardIds = [...new Set(selections.map(s => s.cardId))];
+
+    // GESTION EFFETS SONORES
+    const { volume, setVolume, isMuted, setIsMuted, playTap, playShhh, toggleBgm } = useGameAudio();
+
+    useEffect(() => {
+        if (toggleBgm) {
+            toggleBgm(true);
+        }
+        return () => {
+            if (toggleBgm) toggleBgm(false);
+        };
+    }, [toggleBgm]);
+
+    // 🌟 3. On écoute les ordres sonores du serveur
+    useEffect(() => {
+        const handlePlaySound = ({ sound }) => {
+            if (sound === 'TAP') playTap();
+            if (sound === 'SHHH') playShhh();
+        };
+
+        socket.on('play_sound', handlePlaySound);
+        return () => socket.off('play_sound', handlePlaySound);
+    }, [socket, playTap, playShhh]);
 
     // --- ACTIONS ---
     const handleProposeQuestions = () => {
@@ -77,14 +99,14 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
             // On affiche l'image live si elle correspond à l'action en cours
             setLiveImage(imageBase64);
         };
-        
+
         const handleClearPad = () => {
             setLiveImage(null);
         };
 
         socket.on('sync_live_image', handleSyncLiveImage);
         socket.on('clear_live_pad', handleClearPad);
-        
+
         // On nettoie quand le tour change
         setLiveImage(null);
 
@@ -193,10 +215,31 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
                     <span className="logo-spark">✦</span>
                     <h1 className="game-main-title">SPIRIT LINK</h1>
                     <span className="logo-spark">✦</span>
+
+
+                    {/* 🌟 NOUVEAU : Contrôles audio */}
+                    <div style={{ position: 'absolute', right: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <button
+                            onClick={() => setIsMuted(!isMuted)}
+                            style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                        >
+                            {isMuted || volume === 0 ? <VolumeX size={24} /> : <Volume2 size={24} />}
+                        </button>
+                        <input
+                            type="range"
+                            min="0" max="1" step="0.05"
+                            value={isMuted ? 0 : volume}
+                            onChange={(e) => {
+                                setIsMuted(false);
+                                setVolume(parseFloat(e.target.value));
+                            }}
+                            style={{ width: '80px', accentColor: 'var(--primary)' }}
+                        />
+                    </div>
                 </div>
-                
+
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", position: 'relative' }}>
-                    
+
                     {/* 🌟 NOUVEAU : Le calque absolu pour le Drawing Pad */}
                     {(showPadForAskQuestion || showPadForGuess || showPadForEye) && (
                         <div style={{
@@ -211,7 +254,7 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
                             pointerEvents: 'none' // Permet de cliquer à travers la zone transparente
                         }}>
                             <div style={{ pointerEvents: 'auto', background: 'rgba(15, 23, 42, 1)', padding: '20px', borderRadius: '16px', border: '1px solid var(--primary)', boxShadow: '0 20px 40px rgba(0,0,0,0.8)' }}>
-                                
+
                                 {showPadForAskQuestion && (
                                     <>
                                         <p style={{ color: 'var(--primary)', fontSize: '1.1rem', marginBottom: '2px', textAlign: 'center' }}>{turnState.selectedQuestion}</p>
@@ -240,174 +283,174 @@ const PlayingBoard = ({ game, socket, myProfile }) => {
 
                     <div className="game-top-section" style={{ width: "100%" }}>
                         {renderTeamMenu('SUN', game.teams?.sun)}
-                        
+
                         {/* 🌟 On passe liveImage au CarnetBoard pour qu'il l'affiche en temps réel */}
-                        <CarnetBoard 
-                            game={game} 
-                            turnState={turnState} 
-                            isMyTurn={isMyTurn} 
-                            isMedium={isMedium} 
-                            activeTeam={activeTeam} 
+                        <CarnetBoard
+                            game={game}
+                            turnState={turnState}
+                            isMyTurn={isMyTurn}
+                            isMedium={isMedium}
+                            activeTeam={activeTeam}
                             onEyeClick={handleEyeClick}
-                            liveImage={liveImage} 
+                            liveImage={liveImage}
                             socket={socket}
                         />
-                        
+
                         {renderTeamMenu('MOON', game.teams?.moon)}
                     </div>
                 </div>
             </div>
 
             {/* --- ACTIONS DU BAS --- */}
-            { !(isMedium && isMyTurn && showPadForGuess) &&
-            !(isSpirit && isMyTurn && showPadForEye) && (
-            <div className="game-bottom-section">
-                {isSpirit && (
-                    <div className='secret-object-spirit'>
-                       <span> OBJET SECRET : </span>
-                       <span style={{display:'flex', width:'100%', justifyContent:'space-between', alignItems:'anchor-center'}}><span className="logo-spark">✦</span> {game.secretObject}.<span className="logo-spark">✦</span></span>
-                    </div>
-                )}
-
-                {/* ÉTAT 0 : Médium choisit de Proposer ou Deviner */}
-                {isMedium && isMyTurn && !turnState.action && (
-                    <div className="triple-actions">
-                        <button className="ghost-button btn-primary" onClick={handleProposeQuestions} disabled={uniqueSelectedCardIds.length !== 2}>
-                            <HelpCircle size={18} /> PROPOSER ({uniqueSelectedCardIds.length}/2)
-                        </button>
-                        <button className="ghost-button btn-primary" onClick={() => socket.emit('guess_letter', { gameId: game.gameId, team: activeTeam, letter: '' })}>
-                            <EyeIcon size={18} /> DEVINER L'OBJET
-                        </button>
-                        {!teamData.mulliganUsed && (
-                            <button className="mulligan-btn" onClick={handleMulliganClick} title="Mulligan (Repiocher 7 cartes)">
-                                <RefreshCcw size={28} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '8px', marginLeft: '8px' }} />
-                            </button>
-                        )}
-                    </div>
-                )}
-
-                {/* ÉTAT 1 : L'Esprit choisit une question */}
-                {isSpirit && isMyTurn && turnState.action === 'ASK_QUESTION' && !turnState.selectedQuestion && (
-                    <div className="bottom-action-panel active-turn">
-                        <h4 style={{ color: 'var(--primary)', marginBottom: '20px' }}>Vos Médiums vous proposent ces deux questions :</h4>
-                        <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
-                            {turnState.pendingQuestions?.map(q => {
-                                const cardBadges = selections.filter(s => s.cardId === q.id);
-                                const isSelected = cardBadges.length > 0;
-                                return (
-                                    <Card key={q.id} card={q} isFaceUp={true} isSelected={isSelected} selectionBadges={cardBadges} onClick={() => toggleCardSelection(q.id)} />
-                                );
-                            })}
-                        </div>
-                        <button className="ghost-button btn-primary" onClick={handleSelectQuestion} disabled={uniqueSelectedCardIds.length !== 1}>
-                            <Check size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> VALIDER LA QUESTION
-                        </button>
-                    </div>
-                )}
-
-                {/* ÉTAT 2 : Bouton Silencio pour le Médium (Le pad est en haut) */}
-                {isMyTurn && turnState.action === 'ASK_QUESTION' && turnState.selectedQuestion && isMedium && (
-                    <div className="bottom-action-panel active-turn">
-                         <p style={{ marginBottom: '10px', fontSize: '1.1rem' }}>L'Esprit rédige l'indice. Appuyez quand vous avez compris.</p>
-                         <button className="ghost-button giant-btn" style={{ background: '#ef4444', color: 'white', borderColor: '#ef4444' }} onClick={() => socket.emit('silencio', { gameId: game.gameId, team: activeTeam })}>
-                             <Hand size={24} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '10px' }} /> SILENCIO !
-                         </button>
-                    </div>
-                )}
-
-                {isMyTurn && isSpirit && turnState.action === 'GUESS_OBJECT' && (
-                    <div className="bottom-action-panel active-turn">
-                        <p style={{ color: 'var(--primary)', fontSize: '1.2rem', margin: '0' }}>
-                            Vos médiums tentent de deviner votre objet secret . . .
-                        </p>
-                    </div>
-                )}
-
-                {/* ÉTAT 4b : L'Esprit Juge la lettre proposée */}
-                {isMyTurn && turnState.action === 'JUDGE_GUESS' && (
-                    <div className="bottom-action-panel active-turn">
-                        <p style={{ color: 'var(--primary)', fontSize: '1.2rem', margin: '0 0 10px 0' }}>
-                            {isSpirit ? "Est-ce la bonne lettre ?" : "En attente du jugement de votre Esprit..."}
-                        </p>
-
+            {!(isMedium && isMyTurn && showPadForGuess) &&
+                !(isSpirit && isMyTurn && showPadForEye) && (
+                    <div className="game-bottom-section">
                         {isSpirit && (
-                            // 🌟 NOUVEAU : flex-wrap pour que les boutons passent en dessous si pas de place
-                            <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
-                                <div style={{ padding: '15px', background: 'rgba(255,255,255,0.05)', border: '2px solid var(--primary)', borderRadius: '12px' }}>
-                                    {turnState.pendingGuessLetter?.isDot ? (
-                                        <span style={{ fontSize: '3rem', fontWeight: 'bold', lineHeight: '1' }}>.</span>
-                                    ) : (
-                                        <img src={turnState.pendingGuessLetter?.imageBase64} alt="Tentative" style={{ height: '80px' }} />
-                                    )}
-                                </div>
-
-                                <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
-                                    <button
-                                        className="ghost-button"
-                                        style={{ background: '#0fad79', color: 'white', borderColor: '#0fad79', padding: '15px 20px' }}
-                                        onClick={() => socket.emit('judge_guess_letter', { gameId: game.gameId, team: activeTeam, isCorrect: true })}
-                                    >
-                                        Tapoter
-                                    </button>
-                                    <button
-                                        className="ghost-button"
-                                        style={{ background: '#c43333', color: 'white', borderColor: '#c43333', padding: '15px 20px' }}
-                                        onClick={() => socket.emit('judge_guess_letter', { gameId: game.gameId, team: activeTeam, isCorrect: false })}
-                                    >
-                                        Chuuut !
-                                    </button>
-                                </div>
+                            <div className='secret-object-spirit'>
+                                <span> OBJET SECRET : </span>
+                                <span style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'anchor-center' }}><span className="logo-spark">✦</span> {game.secretObject}.<span className="logo-spark">✦</span></span>
                             </div>
                         )}
+
+                        {/* ÉTAT 0 : Médium choisit de Proposer ou Deviner */}
+                        {isMedium && isMyTurn && !turnState.action && (
+                            <div className="triple-actions">
+                                <button className="ghost-button btn-primary" onClick={handleProposeQuestions} disabled={uniqueSelectedCardIds.length !== 2}>
+                                    <HelpCircle size={18} /> PROPOSER ({uniqueSelectedCardIds.length}/2)
+                                </button>
+                                <button className="ghost-button btn-primary" onClick={() => socket.emit('guess_letter', { gameId: game.gameId, team: activeTeam, letter: '' })}>
+                                    <EyeIcon size={18} /> DEVINER L'OBJET
+                                </button>
+                                {!teamData.mulliganUsed && (
+                                    <button className="mulligan-btn" onClick={handleMulliganClick} title="Mulligan (Repiocher 7 cartes)">
+                                        <RefreshCcw size={28} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '8px', marginLeft: '8px' }} />
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
+                        {/* ÉTAT 1 : L'Esprit choisit une question */}
+                        {isSpirit && isMyTurn && turnState.action === 'ASK_QUESTION' && !turnState.selectedQuestion && (
+                            <div className="bottom-action-panel active-turn">
+                                <h4 style={{ color: 'var(--primary)', marginBottom: '20px' }}>Vos Médiums vous proposent ces deux questions :</h4>
+                                <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
+                                    {turnState.pendingQuestions?.map(q => {
+                                        const cardBadges = selections.filter(s => s.cardId === q.id);
+                                        const isSelected = cardBadges.length > 0;
+                                        return (
+                                            <Card key={q.id} card={q} isFaceUp={true} isSelected={isSelected} selectionBadges={cardBadges} onClick={() => toggleCardSelection(q.id)} />
+                                        );
+                                    })}
+                                </div>
+                                <button className="ghost-button btn-primary" onClick={handleSelectQuestion} disabled={uniqueSelectedCardIds.length !== 1}>
+                                    <Check size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> VALIDER LA QUESTION
+                                </button>
+                            </div>
+                        )}
+
+                        {/* ÉTAT 2 : Bouton Silencio pour le Médium (Le pad est en haut) */}
+                        {isMyTurn && turnState.action === 'ASK_QUESTION' && turnState.selectedQuestion && isMedium && (
+                            <div className="bottom-action-panel active-turn">
+                                <p style={{ marginBottom: '10px', fontSize: '1.1rem' }}>L'Esprit rédige l'indice. Appuyez quand vous avez compris.</p>
+                                <button className="ghost-button giant-btn" style={{ background: '#ef4444', color: 'white', borderColor: '#ef4444' }} onClick={() => socket.emit('silencio', { gameId: game.gameId, team: activeTeam })}>
+                                    <Hand size={24} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '10px' }} /> SILENCIO !
+                                </button>
+                            </div>
+                        )}
+
+                        {isMyTurn && isSpirit && turnState.action === 'GUESS_OBJECT' && (
+                            <div className="bottom-action-panel active-turn">
+                                <p style={{ color: 'var(--primary)', fontSize: '1.2rem', margin: '0' }}>
+                                    Vos médiums tentent de deviner votre objet secret . . .
+                                </p>
+                            </div>
+                        )}
+
+                        {/* ÉTAT 4b : L'Esprit Juge la lettre proposée */}
+                        {isMyTurn && turnState.action === 'JUDGE_GUESS' && (
+                            <div className="bottom-action-panel active-turn">
+                                <p style={{ color: 'var(--primary)', fontSize: '1.2rem', margin: '0 0 10px 0' }}>
+                                    {isSpirit ? "Est-ce la bonne lettre ?" : "En attente du jugement de votre Esprit..."}
+                                </p>
+
+                                {isSpirit && (
+                                    // 🌟 NOUVEAU : flex-wrap pour que les boutons passent en dessous si pas de place
+                                    <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
+                                        <div style={{ padding: '15px', background: 'rgba(255,255,255,0.05)', border: '2px solid var(--primary)', borderRadius: '12px' }}>
+                                            {turnState.pendingGuessLetter?.isDot ? (
+                                                <span style={{ fontSize: '3rem', fontWeight: 'bold', lineHeight: '1' }}>.</span>
+                                            ) : (
+                                                <img src={turnState.pendingGuessLetter?.imageBase64} alt="Tentative" style={{ height: '80px' }} />
+                                            )}
+                                        </div>
+
+                                        <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
+                                            <button
+                                                className="ghost-button"
+                                                style={{ background: '#0fad79', color: 'white', borderColor: '#0fad79', padding: '15px 20px' }}
+                                                onClick={() => socket.emit('judge_guess_letter', { gameId: game.gameId, team: activeTeam, isCorrect: true })}
+                                            >
+                                                Tapoter
+                                            </button>
+                                            <button
+                                                className="ghost-button"
+                                                style={{ background: '#c43333', color: 'white', borderColor: '#c43333', padding: '15px 20px' }}
+                                                onClick={() => socket.emit('judge_guess_letter', { gameId: game.gameId, team: activeTeam, isCorrect: false })}
+                                            >
+                                                Chuuut !
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* ÉTAT 5 : Le Médium utilise l'Oeil (Bouton Passer) */}
+                        {isMedium && isMyTurn && turnState.action === 'EYE_POWER_SELECTION' && (
+                            <div className="bottom-action-panel active-turn">
+                                <p style={{ color: '#fcd34d', fontSize: '1.3rem', marginBottom: '10px' }}><EyeIcon size={24} style={{ verticalAlign: 'middle', marginRight: '10px' }} /> Pouvoir de l'Œil</p>
+                                <span style={{ marginBottom: '20px' }}>Choisissez un indice <span style={{ color: '#fcd34d' }}>jaune</span> pour révéler une lettre</span>
+                                <button className="ghost-button btn-primary" onClick={() => socket.emit('skip_eye_power', { gameId: game.gameId, team: activeTeam })}>
+                                    Passer ce pouvoir
+                                </button>
+                            </div>
+                        )}
+
+                        {/* TOUJOURS VISIBLE : La main du Médium */}
+                        {isMedium && !(isMyTurn && turnState.action === 'ASK_QUESTION' && turnState.selectedQuestion)
+                            && !(isMyTurn && turnState.action === 'EYE_POWER_SELECTION')
+                            && !(isMyTurn && turnState.action === 'GUESS_OBJECT') && (
+                                <PlayerHand
+                                    hand={teamData.hand}
+                                    isMyTurn={isMyTurn}
+                                    actionState={turnState.action}
+                                    selectedCards={selections}
+                                    onToggleCard={toggleCardSelection}
+                                    onMulligan={handleMulliganClick}
+                                    mulliganUsed={teamData.mulliganUsed}
+                                />
+                            )}
+
+                        {isSpirit && !(isMyTurn && turnState.action === 'ASK_QUESTION')
+                            && !(isMyTurn && turnState.action === 'JUDGE_GUESS')
+                            && !(isMyTurn && turnState.action === 'GUESS_OBJECT')
+                            && !(isEyeRevealPhase) && (
+                                <div className="spirit-memory-zone">
+                                    <PlayerHand
+                                        hand={teamData.clues
+                                            .filter(c => c.isComplete && !c.isGuess)
+                                            .map((clue, idx) => ({
+                                                id: `Indice ${idx + 1}`,
+                                                text: `${clue.questionId}`
+                                            }))
+                                        }
+                                        selectedCards={[]}
+                                        isSpirit={true}
+                                    />
+                                </div>
+                            )}
                     </div>
                 )}
-
-                {/* ÉTAT 5 : Le Médium utilise l'Oeil (Bouton Passer) */}
-                {isMedium && isMyTurn && turnState.action === 'EYE_POWER_SELECTION' && (
-                    <div className="bottom-action-panel active-turn">
-                        <p style={{ color: '#fcd34d', fontSize: '1.3rem', marginBottom: '10px' }}><EyeIcon size={24} style={{ verticalAlign: 'middle', marginRight: '10px' }} /> Pouvoir de l'Œil</p>
-                        <span style={{ marginBottom: '20px' }}>Choisissez un indice <span style={{ color: '#fcd34d' }}>jaune</span> pour révéler une lettre</span>
-                        <button className="ghost-button btn-primary" onClick={() => socket.emit('skip_eye_power', { gameId: game.gameId, team: activeTeam })}>
-                            Passer ce pouvoir
-                        </button>
-                    </div>
-                )}
-
-                {/* TOUJOURS VISIBLE : La main du Médium */}
-                {isMedium && !(isMyTurn && turnState.action === 'ASK_QUESTION' && turnState.selectedQuestion)
-                    && !(isMyTurn && turnState.action === 'EYE_POWER_SELECTION')
-                    && !(isMyTurn && turnState.action === 'GUESS_OBJECT') && (
-                        <PlayerHand
-                            hand={teamData.hand}
-                            isMyTurn={isMyTurn}
-                            actionState={turnState.action}
-                            selectedCards={selections}
-                            onToggleCard={toggleCardSelection}
-                            onMulligan={handleMulliganClick}
-                            mulliganUsed={teamData.mulliganUsed}
-                        />
-                    )}
-
-                {isSpirit && !(isMyTurn && turnState.action === 'ASK_QUESTION')
-                && !(isMyTurn && turnState.action === 'JUDGE_GUESS')
-                && !(isMyTurn && turnState.action === 'GUESS_OBJECT')
-                 && !(isEyeRevealPhase) && (
-                    <div className="spirit-memory-zone">
-                        <PlayerHand
-                            hand={teamData.clues
-                                .filter(c => c.isComplete && !c.isGuess)
-                                .map((clue, idx) => ({
-                                    id: `Indice ${idx + 1}`,
-                                    text: `${clue.questionId}`
-                                }))
-                            }
-                            selectedCards={[]}
-                            isSpirit={true}
-                        />
-                    </div>
-                )}
-            </div>
-            )}
 
             {/* --- MODALES --- */}
             {historyModal && (
